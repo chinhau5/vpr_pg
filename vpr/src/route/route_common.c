@@ -19,6 +19,7 @@
 
 /***************** Variables shared only by route modules *******************/
 
+//initialized by alloc_and_load_rr_node_route_structs before calling try_timing_driven_route
 t_rr_node_route_inf *rr_node_route_inf = NULL;	/* [0..num_rr_nodes-1] */
 
 struct s_bb *route_bb = NULL;	/* [0..num_nets-1]. Limits area in which each  */

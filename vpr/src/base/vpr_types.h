@@ -25,7 +25,7 @@ This document is divided into generally 4 major sections:
 #endif
 
 
-/*#define CREATE_ECHO_FILES*/ /* prints echo files */
+#define CREATE_ECHO_FILES /* prints echo files */
 /*#define DEBUG_FAILED_PACKING_CANDIDATES*//*Displays candidates during packing that failed */
 /*#define PRINT_SINK_DELAYS*//*prints the sink delays to files */
 /*#define PRINT_NET_SLACKS*//*prints out all slacks in the circuit */
@@ -33,7 +33,7 @@ This document is divided into generally 4 major sections:
 /*#define PRINT_NET_DELAYS*//*prints out delays for all connections */
 /*#define PRINT_TIMING_GRAPH*//*prints out the timing graph */
 /*#define PRINT_REL_POS_DISTR *//*prints out the relative distribution graph for placements */
-/*#define DUMP_BLIF_ECHO *//*dump blif of internal representation of user circuit.  Useful for ensuring functional correctness via logical equivalence with input blif*/
+#define DUMP_BLIF_ECHO /*dump blif of internal representation of user circuit.  Useful for ensuring functional correctness via logical equivalence with input blif*/
 
 
 #ifdef SPEC

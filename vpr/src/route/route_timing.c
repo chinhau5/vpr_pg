@@ -80,8 +80,10 @@ try_timing_driven_route(struct s_router_opts router_opts,
 		sinks[i] = clb_net[i].num_sinks;
 		net_index[i] = i;
 	}
+    //sort the nets based on the number of sinks of the net
 	heapsort(net_index, sinks, num_nets, 1);
 
+    //only allocates stuff, no value is loaded
     alloc_timing_driven_route_structs(&pin_criticality, &sink_order,
 				      &rt_node_of_sink);
 
@@ -357,6 +359,8 @@ timing_driven_route_net(int inet,
 	}
 
     num_sinks = clb_net[inet].num_sinks;
+    //pin criticality is calculated based on slack
+    //sort pins based on pin_criticality
     heapsort(sink_order, pin_criticality, num_sinks, 0);
 
 /* Update base costs according to fanout and criticality rules */
@@ -366,7 +370,12 @@ timing_driven_route_net(int inet,
 
     mark_ends(inet);		/* Only needed to check for multiply-connected SINKs */
 
+    //net_rr_terminals map between a net and the rr_node index associated to a point on the net
+    //rr_node_to_rt_node
+    //init rt_root to contain only the source rr_node of the net with no child
     rt_root = init_route_tree_to_source(inet);
+    
+    //route tree allows the path to be traced back
 
     for(itarget = 1; itarget <= num_sinks; itarget++)
 	{
@@ -377,9 +386,11 @@ timing_driven_route_net(int inet,
 
 		highfanout_rlim = mark_node_expansion_by_bin(inet, target_node, rt_root);
 
+        //COST IS CALCULATED HERE!!
 	    add_route_tree_to_heap(rt_root, target_node, target_criticality,
 				   astar_fac);
 
+        //heap head has the smallest cost
 	    current = get_heap_head();
 
 	    if(current == NULL)
@@ -393,6 +404,7 @@ timing_driven_route_net(int inet,
 
 	    while(inode != target_node)
 		{
+            //initial path_cost is HUGE_FLOAT
 		    old_tcost = rr_node_route_inf[inode].path_cost;
 		    new_tcost = current->cost;
 

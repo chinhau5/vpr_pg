@@ -195,11 +195,72 @@ get_channel_occupancy_stats(void)
     float av_occ;
     int **chanx_occ;		/* [1..nx][0..ny] */
     int **chany_occ;		/* [0..nx][1..ny] */
+    
+    int **sb_occ; /* [0..nx][0..ny] */
+    int sb_cap, total_sb_occ, total_sb_cap;
 
+    sb_occ = (int **)alloc_matrix(0, nx, 0, ny, sizeof(int));
 
     chanx_occ = (int **)alloc_matrix(1, nx, 0, ny, sizeof(int));
     chany_occ = (int **)alloc_matrix(0, nx, 1, ny, sizeof(int));
     load_channel_occupancies(chanx_occ, chany_occ);
+    
+    for (j = 0; j <= ny; j++)
+    {
+        for (i = 0; i <= nx; i++)
+        {
+            sb_occ[i][j] = 0;
+        }
+    }
+    total_sb_occ = 0;
+    total_sb_cap = 0;
+    
+    for (j = 0; j <= ny; j++)
+    {
+        for (i = 0; i <= nx; i++)
+        {
+            sb_cap = 0;
+            
+            if (i == 0)
+            {
+                sb_occ[i][j] += chanx_occ[1][j];
+                sb_cap += chan_width_x[i];
+            }
+            else if (i == nx)
+            {
+                sb_occ[i][j] += chanx_occ[nx][j];
+                sb_cap += chan_width_x[i];
+            }
+            else
+            {
+                sb_occ[i][j] += chanx_occ[i][j] + chanx_occ[i+1][j];
+                sb_cap += chan_width_x[i] + chan_width_x[i+1];
+            }
+            
+            if (j == 0)
+            {
+                sb_occ[i][j] += chany_occ[i][1];
+                sb_cap += chan_width_y[j];
+            }
+            else if (j == ny)
+            {
+                sb_occ[i][j] += chany_occ[i][ny];
+                sb_cap += chan_width_y[j];
+            }
+            else
+            {
+                sb_occ[i][j] += chany_occ[i][j] + chany_occ[i][j+1];
+                sb_cap += chan_width_y[j] + chan_width_y[j+1];
+            }
+            
+            total_sb_occ += sb_occ[i][j];
+            total_sb_cap += sb_cap;
+            
+            printf("\n SB (%d,%d): %d/%d", i, j, sb_occ[i][j], sb_cap);
+        }
+    }
+    
+    printf("\n Average SB occ: %f", (float)total_sb_occ/total_sb_cap);
 
     printf("\nX - Directed channels:\n\n");
     printf("j\tmax occ\tav_occ\t\tcapacity\n");
@@ -298,6 +359,9 @@ load_channel_occupancies(int **chanx_occ,
 		    else if(rr_type == CHANX)
 			{
 			    j = rr_node[inode].ylow;
+                
+                assert (rr_node[inode].ylow == rr_node[inode].yhigh);
+                
 			    for(i = rr_node[inode].xlow;
 				i <= rr_node[inode].xhigh; i++)
 				chanx_occ[i][j]++;
@@ -306,6 +370,8 @@ load_channel_occupancies(int **chanx_occ,
 		    else if(rr_type == CHANY)
 			{
 			    i = rr_node[inode].xlow;
+                assert (rr_node[inode].xlow == rr_node[inode].xhigh);
+                
 			    for(j = rr_node[inode].ylow;
 				j <= rr_node[inode].yhigh; j++)
 				chany_occ[i][j]++;
