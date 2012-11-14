@@ -199,13 +199,13 @@ get_channel_occupancy_stats(void)
     int **sb_occ; /* [0..nx][0..ny] */
     int sb_cap, total_sb_occ, total_sb_cap;
 
-    sb_occ = (int **)alloc_matrix(0, nx, 0, ny, sizeof(int));
+    //sb_occ = (int **)alloc_matrix(0, nx, 0, ny, sizeof(int));
 
     chanx_occ = (int **)alloc_matrix(1, nx, 0, ny, sizeof(int));
     chany_occ = (int **)alloc_matrix(0, nx, 1, ny, sizeof(int));
     load_channel_occupancies(chanx_occ, chany_occ);
     
-    for (j = 0; j <= ny; j++)
+    /*for (j = 0; j <= ny; j++)
     {
         for (i = 0; i <= nx; i++)
         {
@@ -263,7 +263,7 @@ get_channel_occupancy_stats(void)
         }
     }
     
-    printf("\n Average SB occ: %f", (float)total_sb_occ/total_sb_cap);
+    printf("\n Average SB occ: %f", (float)total_sb_occ/total_sb_cap);*/
 
     printf("\nX - Directed channels:\n\n");
     printf("j\tmax occ\tav_occ\t\tcapacity\n");

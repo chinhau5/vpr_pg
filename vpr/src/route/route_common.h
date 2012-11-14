@@ -130,3 +130,5 @@ void reserve_locally_used_opins(float pres_fac,
 				t_ivec ** clb_opins_used_locally);
 
 void alloc_chan_occ(enum e_directionality directionality);
+float get_pg_cost(int to_node);
+void calc_pg_efficiency();

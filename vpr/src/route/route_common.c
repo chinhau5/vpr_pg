@@ -48,9 +48,10 @@ static int num_linked_f_pointer_allocated = 0;
 static struct s_linked_f_pointer *rr_modified_head = NULL;
 static struct s_linked_f_pointer *linked_f_pointer_free_head = NULL;
 
-int ****chanx_occ = NULL; //[1..nx][0..ny][0..1], last index is the direction
-int ****chany_occ = NULL;
-const int pg_group_size = 8;
+int ***chanx_occ = NULL; //[1..nx][0..ny][0..1], last index is the direction
+int ***chany_occ = NULL;
+const int pg_group_size = 32;
+int x_pg_regions, y_pg_regions;
 
 /*  The numbering relation between the channels and clbs is:               *
  *                                                                         *
@@ -252,7 +253,6 @@ void alloc_chan_occ(enum e_directionality directionality)
 {
     int i, j, k, l;
     int fac;
-    int x_pg_regions, y_pg_regions;
 
     if (directionality == UNI_DIRECTIONAL) {
         fac = 2;
@@ -261,10 +261,28 @@ void alloc_chan_occ(enum e_directionality directionality)
         fac = 1;
     }
 
-    assert(pg_group_size % 2 == 0);
+    //assert(pg_group_size % 2 == 0);
 
-    x_pg_regions = (int)ceil((float)(chan_width_x[0] / fac) / pg_group_size);
-    y_pg_regions = (chan_width_y[0] / fac) / pg_group_size;
+    chanx_occ = (int ***)alloc_matrix3(1, nx, 0, ny, 0, chan_width_x[0] - 1, sizeof(int));
+    chany_occ = (int ***)alloc_matrix3(0, nx, 1, ny, 0, chan_width_y[0] - 1, sizeof(int));
+    for (i = 1; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            for (k = 0; k <= chan_width_x[0] - 1; k++) {
+                chanx_occ[i][j][k] = 0;
+            }
+        }
+    }
+
+    for (i = 0; i <= nx; i++) {
+        for (j = 1; j <= ny; j++) {
+            for (k = 0; k <= chan_width_y[0] - 1; k++) {
+                chany_occ[i][j][k] = 0;
+            }
+        }
+    }
+
+    /*x_pg_regions = (int)ceil((float)(chan_width_x[0] / fac) / pg_group_size);
+    y_pg_regions = (int)ceil((float)(chan_width_y[0] / fac) / pg_group_size);
     chanx_occ = (int ****)alloc_matrix4(1, nx, 0, ny, 0, fac - 1, 0, x_pg_regions - 1, sizeof(int));
     chany_occ = (int ****)alloc_matrix4(0, nx, 1, ny, 0, fac - 1, 0, y_pg_regions - 1, sizeof(int));
     for (i = 1; i <= nx; i++) {
@@ -285,21 +303,108 @@ void alloc_chan_occ(enum e_directionality directionality)
                 }
             }
         }
-    }
+    }*/
 }
 
-void dump_chan_occ()
+void calc_pg_efficiency()
 {
-    /*int i, j, k, l;
+    int i, j, k;
+    int inc_on, dec_on;
+    int *pg_inc_on, *pg_dec_on;
+    int num_pg_regions;
+    int total;
+    float average;
+    int count;
+
+    num_pg_regions = (int)ceil((float)(chan_width_x[0] / 2) / pg_group_size);
+
+    pg_inc_on = (int *)my_malloc(num_pg_regions * sizeof(int));
+    pg_dec_on = (int *)my_malloc(num_pg_regions * sizeof(int));
+
+    average = 0;
+    count = 0;
+
     for (i = 1; i <= nx; i++) {
         for (j = 0; j <= ny; j++) {
-            for (k = 0; k < fac - 1; k++) {
-                for (l = 0; l < x_pg_regions - 1; l++) {
-                    chanx_occ[i][j][k][l] = 0;
+            memset(pg_inc_on, 0, num_pg_regions * sizeof(int));
+            memset(pg_dec_on, 0, num_pg_regions * sizeof(int));
+            for (k = 0; k <= chan_width_x[0] - 1; k++) {
+                if (k % 2 == 0) {
+                    pg_inc_on[(k / 2) / pg_group_size] += chanx_occ[i][j][k];
+                } else {
+                    pg_dec_on[(k / 2) / pg_group_size] += chanx_occ[i][j][k];
                 }
             }
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_inc_on[k] > 0) {
+                    total += 1;
+                }
+            }
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf("\nCHANX (%d, %d): %f", i, j, (float)total / num_pg_regions);
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_dec_on[k] > 0) {
+                    total += 1;
+                }
+            }
+
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf(" %f", (float)total / num_pg_regions);
         }
-    }*/
+    }
+
+    printf("\nCHANX average: %f", 1.0-(average / count));
+
+    average = 0;
+    count = 0;
+
+    for (i = 0; i <= nx; i++) {
+        for (j = 1; j <= ny; j++) {
+            memset(pg_inc_on, 0, num_pg_regions * sizeof(int));
+            memset(pg_dec_on, 0, num_pg_regions * sizeof(int));
+
+            for (k = 0; k <= chan_width_x[0] - 1; k++) {
+                if (k % 2 == 0) {
+                    pg_inc_on[(k / 2) / pg_group_size] += chany_occ[i][j][k];
+                } else {
+                    pg_dec_on[(k / 2) / pg_group_size] += chany_occ[i][j][k];
+                }
+            }
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_inc_on[k] > 0) {
+                    total += 1;
+                }
+            }
+
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf("\nCHANY (%d, %d): %f", i, j, (float)total / num_pg_regions);
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_dec_on[k] > 0) {
+                    total += 1;
+                }
+            }
+
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf(" %f", (float)total / num_pg_regions);
+        }
+    }
+
+    printf("\nCHANY average: %f", 1.0-(average / count));
+
+    free(pg_inc_on);
+    free(pg_dec_on);
 }
 
 
@@ -424,6 +529,91 @@ feasible_routing(void)
     return (TRUE);
 }
 
+float get_pg_cost(int to_node)
+{
+    int i;
+    int pg_on = 0;
+    float cost;
+
+    switch (rr_node[to_node].type) {
+    case CHANX:
+        if (rr_node[to_node].direction == INC_DIRECTION) {
+            for (i = 0; i < pg_group_size; i++) {
+                pg_on += chanx_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2];
+            }
+        } else {
+            for (i = 0; i < pg_group_size; i++) {
+                pg_on += chanx_occ[rr_node[to_node].xhigh][rr_node[to_node].ylow][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2 + 1];
+            }
+        }
+
+        if (pg_on == 0) {
+            //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+        } else {
+            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+        }
+        break;
+
+    case CHANY:
+        if (rr_node[to_node].direction == INC_DIRECTION) {
+            for (i = 0; i < pg_group_size; i++) {
+                pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2];
+            }
+        } else {
+            for (i = 0; i < pg_group_size; i++) {
+                pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].yhigh][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2 + 1];
+            }
+        }
+
+        if (pg_on == 0) {
+            //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+        } else {
+            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+        }
+        break;
+
+    default:
+        cost = 0;
+        break;
+    }
+
+    /*if (rr_node[inode].type == CHANX) {
+        
+    } else if (rr_node[inode].type == CHANY) {
+        switch (rr_node[to_node].type) {
+        case CHANX:
+            if (rr_node[inode].direction == INC_DIRECTION) {
+                for (i = 0; i < pg_group_size; i++) {
+                    pg_on += chanx_occ[rr_node[inode].xhigh][rr_node[inode].ylow][((rr_node[inode].ptc_num / 2) / pg_group_size) + i*2];
+                }
+            } else {
+                for (i = 0; i < pg_group_size; i++) {
+                    pg_on += chanx_occ[rr_node[inode].xlow][rr_node[inode].ylow][((rr_node[inode].ptc_num / 2) / pg_group_size) + i*2 + 1];
+                }
+            }       
+            break;
+
+        case CHANY:
+            if (rr_node[inode].direction == INC_DIRECTION) {
+                for (i = 0; i < pg_group_size; i++) {
+                    pg_on += chany_occ[rr_node[inode].xhigh][rr_node[inode].ylow][((rr_node[inode].ptc_num / 2) / pg_group_size) + i*2];
+                }
+            } else {
+                for (i = 0; i < pg_group_size; i++) {
+                    pg_on += chany_occ[rr_node[inode].xlow][rr_node[inode].ylow][((rr_node[inode].ptc_num / 2) / pg_group_size) + i*2 + 1];
+                }
+            }    
+            break;
+
+        default:
+            break;
+        }
+    }*/
+
+    return cost;
+}
 
 void
 pathfinder_update_one_cost(struct s_trace *route_segment_start,
@@ -451,8 +641,6 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
 	{
 	    inode = tptr->index;
 
-        ilow = ihigh = 0;
-
         if (rr_node[inode].type == CHANX) {
             if (tptr->next) {
                 next_inode = tptr->next->index;
@@ -463,8 +651,7 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                     if (rr_node[inode].direction == INC_DIRECTION) {
                         ilow = rr_node[inode].xlow;
                         ihigh = rr_node[next_inode].xlow;
-                    }
-                    else {
+                    } else {
                         ilow = rr_node[next_inode].xlow;
                         ihigh = rr_node[inode].xhigh;
                     }
@@ -479,20 +666,25 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                     if (rr_node[inode].direction == INC_DIRECTION) {
                         ilow = rr_node[inode].xlow;
                         ihigh = rr_node[next_inode].xlow;
-                    }
-                    else {
+                    } else {
                         ilow = rr_node[next_inode].xlow + 1;
                         ihigh = rr_node[inode].xhigh;
                     }
                     break;
                 
                 default:
+                    ilow = ihigh = -1;
                     break;
                 }
-            }
-            for (i = ilow; i <= ihigh; i++) {
-                //chanx_occ[i][rr_node[inode].ylow][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][rr_node[inode].ptc_num / (2 * pg_granularity)] += add_or_sub;
-                chanx_occ[i][rr_node[inode].ylow][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size] += add_or_sub;
+
+                if (ilow != -1) {
+                    assert(ihigh >= ilow);
+                    for (i = ilow; i <= ihigh; i++) {
+                        //chanx_occ[i][rr_node[inode].ylow][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][rr_node[inode].ptc_num / (2 * pg_granularity)] += add_or_sub;
+                        //chanx_occ[i][rr_node[inode].ylow][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size] += add_or_sub;
+                        chanx_occ[i][rr_node[inode].ylow][rr_node[inode].ptc_num] += add_or_sub;
+                    }
+                }
             }
         } else if (rr_node[inode].type == CHANY) {
             if (tptr->next) {
@@ -505,20 +697,17 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                     if (rr_node[inode].direction == INC_DIRECTION) {
                         ilow = rr_node[inode].ylow;
                         ihigh = rr_node[next_inode].ylow;
-                    }
-                    else {
+                    } else {
                         ilow = rr_node[next_inode].ylow;
                         ihigh = rr_node[inode].yhigh;
                     }
-                    
                     break;
 
                 case CHANX:
                     if (rr_node[inode].direction == INC_DIRECTION) { //net 7
                         ilow = rr_node[inode].ylow;
                         ihigh = rr_node[next_inode].ylow;
-                    }
-                    else { //net 39
+                    } else { //net 39
                         ilow = rr_node[next_inode].ylow + 1;
                         ihigh = rr_node[inode].yhigh;
                     }
@@ -530,14 +719,19 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                     break;
 
                 default:
+                    ilow = ihigh = -1;
                     break;
                 }
 
-                for (i = ilow; i <= ihigh; i++) {
-                    //chany_occ[rr_node[inode].xlow][i][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][rr_node[inode].ptc_num / (2 * pg_granularity)] += add_or_sub;
-                    chany_occ[rr_node[inode].xlow][i][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size] += add_or_sub;
+                if (ilow != -1) {
+                    assert(ihigh >= ilow);
+                    for (i = ilow; i <= ihigh; i++) {
+                        //chany_occ[rr_node[inode].xlow][i][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][rr_node[inode].ptc_num / (2 * pg_granularity)] += add_or_sub;
+                        //chany_occ[rr_node[inode].xlow][i][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size] += add_or_sub;
+                        chany_occ[rr_node[inode].xlow][i][rr_node[inode].ptc_num] += add_or_sub;
+                    }
                 }
-            }
+            } //end if (tptr->next)
         }
 
 	    occ = rr_node[inode].occ + add_or_sub;
@@ -772,14 +966,14 @@ reset_path_costs(void)
 
 
 float
-get_rr_cong_cost(int inode, int from_inode)
+get_rr_cong_cost(int inode)
 {
 
 /* Returns the *congestion* cost of using this rr_node. */
 
     short cost_index;
     float cost;
-    int i;
+    /*int i;
     float pg_cost, temp;
 
     pg_cost = 0;
@@ -787,18 +981,12 @@ get_rr_cong_cost(int inode, int from_inode)
         for (i = rr_node[inode].xlow; i <= rr_node[inode].xhigh; i++) {
             temp = chanx_occ[i][rr_node[inode].ylow][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size];
             assert(temp <= pg_group_size);
-            /*if (temp > 1) {
-                temp = 1;
-            }*/
             pg_cost += temp;
         }
     } else if (rr_node[inode].type == CHANY) {
         for (i = rr_node[inode].ylow; i <= rr_node[inode].yhigh; i++) {
             temp = chany_occ[rr_node[inode].xlow][i][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size];
             assert(temp <= pg_group_size);
-            /*if (temp > 1) {
-                temp = 1;
-            }*/
             pg_cost += temp;//chany_occ[rr_node[inode].xlow][i][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][rr_node[inode].ptc_num / (2 * pg_granularity)];
         }
     }
@@ -807,12 +995,12 @@ get_rr_cong_cost(int inode, int from_inode)
         pg_cost = pg_cost;
     } else if (pg_cost == 0) {
         pg_cost = 0.1;
-    }
+    }*/
 
     cost_index = rr_node[inode].cost_index;
     cost = rr_indexed_data[cost_index].base_cost * (
 	rr_node_route_inf[inode].acc_cost *
-	rr_node_route_inf[inode].pres_cost + (1/pg_cost));
+	rr_node_route_inf[inode].pres_cost );//+ (1/pg_cost));
     
     return (cost);
 }

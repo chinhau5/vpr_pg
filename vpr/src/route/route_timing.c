@@ -14,6 +14,8 @@
 #include "net_delay.h"
 #include "stats.h"
 
+#define PG
+
 /******************** Subroutines local to route_timing.c ********************/
 
 static int get_max_pins_per_net(void);
@@ -214,6 +216,8 @@ try_timing_driven_route(struct s_router_opts router_opts,
 #endif
 			free(net_index);
 			free(sinks);
+            calc_pg_efficiency();
+
 		    return (TRUE);
 		}
 
@@ -533,6 +537,9 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 							    target_node,
 							    target_criticality,
 							    R_upstream);
+//#ifdef PG
+//        tot_cost += get_pg_cost(inode);
+//#endif
 	    node_to_heap(inode, tot_cost, NO_PREVIOUS, NO_PREVIOUS,
 			 backward_path_cost, R_upstream);
 	}
@@ -552,7 +559,6 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 	    linked_rt_edge = linked_rt_edge->next;
 	}
 }
-
 
 static void
 timing_driven_expand_neighbours(struct s_heap *current,
@@ -637,9 +643,13 @@ timing_driven_expand_neighbours(struct s_heap *current,
  * congestion cost of all the routing resources back to the existing route  *
  * plus the known delay of the total path back to the source.  new_tot_cost *
  * is this "known" backward cost + an expected cost to get to the target.   */
-
+#ifdef PG
 	    new_back_pcost = old_back_pcost + (1. - criticality_fac) *
-		get_rr_cong_cost(to_node);
+		get_rr_cong_cost(to_node) + get_pg_cost(to_node);
+#else
+        new_back_pcost = old_back_pcost + (1. - criticality_fac) *
+        get_rr_cong_cost(to_node);
+#endif
 
 	    iswitch = rr_node[inode].switches[iconn];
 	    if(switch_inf[iswitch].buffered)
