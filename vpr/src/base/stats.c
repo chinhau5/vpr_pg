@@ -253,8 +253,11 @@ get_channel_occupancy_stats(void)
                 sb_cap += chan_width_y[j] + chan_width_y[j+1];
             }
             
-            total_sb_occ += sb_occ[i][j];
-            total_sb_cap += sb_cap;
+            if (sb_occ[i][j] > 0)
+            {
+                total_sb_occ += sb_occ[i][j];
+                total_sb_cap += sb_cap;
+            }
             
             printf("\n SB (%d,%d): %d/%d", i, j, sb_occ[i][j], sb_cap);
         }
@@ -370,6 +373,7 @@ load_channel_occupancies(int **chanx_occ,
 		    else if(rr_type == CHANY)
 			{
 			    i = rr_node[inode].xlow;
+
                 assert (rr_node[inode].xlow == rr_node[inode].xhigh);
                 
 			    for(j = rr_node[inode].ylow;

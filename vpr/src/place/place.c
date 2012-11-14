@@ -750,7 +750,7 @@ try_place(struct s_placer_opts placer_opts,
 			placer_opts.td_place_exp_first;
 		}
 #ifdef VERBOSE
-	    dump_clbs();
+	    //dump_clbs();
 #endif
 	}
 
@@ -878,7 +878,7 @@ try_place(struct s_placer_opts placer_opts,
 #endif
 
 #ifdef VERBOSE
-    dump_clbs();
+    //dump_clbs();
 #endif
 
     check_place(bb_cost, timing_cost, placer_opts.place_cost_type,
@@ -3565,7 +3565,7 @@ initial_placement(enum e_pad_loc_type pad_loc_type,
 
 #ifdef VERBOSE
     printf("At end of initial_placement.\n");
-    dump_clbs();
+    //dump_clbs();
 #endif
     for(i = 0; i < num_types; i++)
 	{

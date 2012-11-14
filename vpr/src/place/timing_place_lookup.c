@@ -555,6 +555,8 @@ alloc_routing_structs(struct s_router_opts router_opts,
 
     bb_factor = nx + ny;	/*set it to a huge value */
     init_route_structs(bb_factor);
+
+    alloc_chan_occ(det_routing_arch.directionality);
 }
 
 /**************************************/

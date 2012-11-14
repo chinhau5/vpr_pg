@@ -93,6 +93,7 @@ struct s_trace **trace_tail = NULL;	/* [0..(num_nets-1)] */
 
 int num_rr_nodes = 0;
 t_rr_node *rr_node = NULL;	/* [0..(num_rr_nodes-1)] */
+//maps grid (x,y) to rr_node indices
 t_ivec ***rr_node_indices = NULL;
 
 int num_rr_indexed_data = 0;
@@ -135,6 +136,32 @@ static void free_complex_block_types();
 
 
 /************************* Subroutine definitions ***************************/
+
+void print_grid_info()
+{
+	int i, j, iclass, ipin;
+    t_type_ptr type;
+    printf("Grid info\n");
+	for (i = 0; i <= nx+1; i++)
+	{
+		for (j = 0; j <= ny+1; j++)
+		{
+            type = grid[i][j].type;
+            
+            printf("Tile (%d,%d)\n", i, j);
+            printf("Name: %s\n", type->name);
+            
+            for (iclass = 0; iclass < type->num_class; iclass++)
+            {
+                printf("Class type: %d Num pins: %d\n", type->class_inf[iclass].type, type->class_inf[iclass].num_pins);
+            }
+            
+            for (ipin = 0; ipin < type->num_pins; ipin++)
+            {
+            }
+		}
+	}
+}
 
 /**
  * VPR program
@@ -254,6 +281,8 @@ main(int argc,
 	    init_graphics("VPR:  Versatile Place and Route for FPGAs");
 	    alloc_draw_structs();
 	}
+    
+    //print_grid_info();
 
     /* Do placement and routing */
     place_and_route(Operation, PlacerOpts, FileNameOpts.PlaceFile,

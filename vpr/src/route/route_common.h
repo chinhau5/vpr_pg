@@ -128,3 +128,5 @@ void free_trace_structs(void);
 void reserve_locally_used_opins(float pres_fac,
 				boolean rip_up_local_opins,
 				t_ivec ** clb_opins_used_locally);
+
+void alloc_chan_occ(enum e_directionality directionality);

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <assert.h>
 #include "util.h"
 #include "vpr_types.h"
 #include "globals.h"
@@ -372,26 +373,36 @@ timing_driven_route_net(int inet,
 
     //net_rr_terminals map between a net and the rr_node index associated to a point on the net
     //rr_node_to_rt_node
-    //init rt_root to contain only the source rr_node of the net with no child
+    //init rt_root to contain only the source rr_node of the net with no child, child_list = NULL
+    //re_expand is set to true, we always want to expand the root node, if not there's no child to go to
+    //using alloc_rt_node here
     rt_root = init_route_tree_to_source(inet);
     
     //route tree allows the path to be traced back
-
+    //two structures are used, route tree and heap
+    //heap is only used for one target, and it is cleared after a routing a target
+    //route tree contains the the whole routing tree
     for(itarget = 1; itarget <= num_sinks; itarget++)
 	{
 	    target_pin = sink_order[itarget];
 	    target_node = net_rr_terminals[inet][target_pin];
 
+		//printf("\n%d -> %d", rt_root->inode, target_node);
+
 	    target_criticality = pin_criticality[target_pin];
 
 		highfanout_rlim = mark_node_expansion_by_bin(inet, target_node, rt_root);
 
-        //COST IS CALCULATED HERE!!
+		//printf("[%d][%X] ", itarget, rt_root->u.child_list);
+		//printf("\nadd_route_tree_to_heap\n");
+        //using alloc_heap_data here
 	    add_route_tree_to_heap(rt_root, target_node, target_criticality,
 				   astar_fac);
 
         //heap head has the smallest cost
 	    current = get_heap_head();
+        
+        
 
 	    if(current == NULL)
 		{		/* Infeasible routing.  No possible path for net. */
@@ -426,6 +437,7 @@ timing_driven_route_net(int inet,
 
 		    if(old_tcost > new_tcost && old_back_cost > new_back_cost)
 			{
+                //allows update_route_tree to build the partial route tree
 			    rr_node_route_inf[inode].prev_node =
 				current->u.prev_node;
 			    rr_node_route_inf[inode].prev_edge =
@@ -434,10 +446,13 @@ timing_driven_route_net(int inet,
 			    rr_node_route_inf[inode].backward_path_cost =
 				new_back_cost;
 
+                //modifies rr_modified_head
 			    if(old_tcost > 0.99 * HUGE_FLOAT)	/* First time touched. */
 				add_to_mod_list(&rr_node_route_inf[inode].
 						path_cost);
 
+				//real cost of each neighbour is calculated here and added to the heap
+				//printf("\ntiming_driven_expand_neighbours\n");
 			    timing_driven_expand_neighbours(current, inet,
 							    bend_cost,
 							    target_criticality,
@@ -457,7 +472,7 @@ timing_driven_route_net(int inet,
 			}
 
 		    inode = current->index;
-		}
+		} //end while(inode != target_node)
 
 /* NB:  In the code below I keep two records of the partial routing:  the   *
  * traceback and the route_tree.  The route_tree enables fast recomputation *
@@ -469,10 +484,14 @@ timing_driven_route_net(int inet,
 
 	    rr_node_route_inf[inode].target_flag--;	/* Connected to this SINK. */
 	    new_route_start_tptr = update_traceback(current, inet);
+
+		//rt_root->u.child_list is updated by update_route_tree!!, "current" will point to the sink here
+        //update_route_tree traces back using rr_node_route_inf
 	    rt_node_of_sink[target_pin] = update_route_tree(current);
 	    free_heap_data(current);
 	    pathfinder_update_one_cost(new_route_start_tptr, 1, pres_fac);
 
+		//heap is emptied after routing each target
 	    empty_heap();
 	    reset_path_costs();
 	}
@@ -520,6 +539,11 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 
     linked_rt_edge = rt_node->u.child_list;
 
+	
+
+	//since this function is only called
+	//assert (linked_rt_edge == NULL);
+	
     while(linked_rt_edge != NULL)
 	{
 	    child_node = linked_rt_edge->child;
@@ -548,6 +572,7 @@ timing_driven_expand_neighbours(struct s_heap *current,
     t_rr_type from_type, to_type;
     float new_tot_cost, old_back_pcost, new_back_pcost, R_upstream;
     float new_R_upstream, Tdel;
+    int temp;
 
     inode = current->index;
     old_back_pcost = current->backward_path_cost;
@@ -586,6 +611,27 @@ timing_driven_expand_neighbours(struct s_heap *current,
 				   rr_node[to_node].yhigh != target_y))
 		continue;
 
+        /*if (rr_node[inode].type == CHANX) {
+            if (rr_node[to_node].type == CHANX) {
+                //connecting to another track in the same direction
+                temp = 100;
+            } else if (rr_node[to_node].type == CHANY) {
+                assert(rr_node[to_node].xlow == rr_node[to_node].xhigh);
+                if (rr_node[inode].direction == DEC_DIRECTION && rr_node[to_node].xlow == rr_node[inode].xlow) {
+                    temp = 1;
+                } else if (rr_node[inode].direction == INC_DIRECTION && rr_node[to_node].xlow == rr_node[inode].xhigh) {
+                    //changing direction at the end of the x-track
+                    //get_rr_node_index(CHANY, rr_node_indices)
+                    assert();
+                    temp = 0;
+                } else {
+                    //changing direction at the middle of the x-track
+                    temp = 1;
+                }
+            }
+        } else if (rr_node[inode].type == CHANY) {
+
+        }*/
 
 /* new_back_pcost stores the "known" part of the cost to this node -- the   *
  * congestion cost of all the routing resources back to the existing route  *
@@ -612,6 +658,7 @@ timing_driven_expand_neighbours(struct s_heap *current,
 	    new_R_upstream += rr_node[to_node].R;
 	    new_back_pcost += criticality_fac * Tdel;
 
+        //for combined global/detailed routing, bend_cost == 0 
 	    if(bend_cost != 0.)
 		{
 		    from_type = rr_node[inode].type;

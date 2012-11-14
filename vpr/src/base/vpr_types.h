@@ -25,7 +25,7 @@ This document is divided into generally 4 major sections:
 #endif
 
 
-#define CREATE_ECHO_FILES /* prints echo files */
+/*#define CREATE_ECHO_FILES*//* prints echo files */
 /*#define DEBUG_FAILED_PACKING_CANDIDATES*//*Displays candidates during packing that failed */
 /*#define PRINT_SINK_DELAYS*//*prints the sink delays to files */
 /*#define PRINT_NET_SLACKS*//*prints out all slacks in the circuit */

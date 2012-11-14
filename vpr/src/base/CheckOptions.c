@@ -15,9 +15,10 @@ CheckOptions(INP t_options Options,
 {
     boolean TimingPlacer;
     boolean TimingRouter;
-	boolean default_flow;
+	boolean default_flow = (Options.Count[OT_ROUTE] == 0 && Options.Count[OT_PLACE] == 0 && Options.Count[OT_PACK] == 0 && Options.Count[OT_TIMING_ANALYZE_ONLY_WITH_NET_DELAY] == 0);
+	//boolean default_flow;
 
-	default_flow = (Options.Count[OT_ROUTE] == 0 && Options.Count[OT_PLACE] == 0 && Options.Count[OT_PACK] == 0 && Options.Count[OT_TIMING_ANALYZE_ONLY_WITH_NET_DELAY] == 0);
+	//default_flow = (Options.Count[OT_ROUTE] == 0 && Options.Count[OT_PLACE] == 0 && Options.Count[OT_PACK] == 0 && Options.Count[OT_TIMING_ANALYZE_ONLY_WITH_NET_DELAY] == 0);
     const struct s_TokenPair *Cur;
     enum e_OptionBaseToken Yes;
 
