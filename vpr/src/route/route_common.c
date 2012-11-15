@@ -531,19 +531,32 @@ feasible_routing(void)
 
 float get_pg_cost(int to_node)
 {
-    int i;
+    int i, index;
     int pg_on = 0;
     float cost;
+    int debug[32];
 
     switch (rr_node[to_node].type) {
     case CHANX:
         if (rr_node[to_node].direction == INC_DIRECTION) {
             for (i = 0; i < pg_group_size; i++) {
-                pg_on += chanx_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2];
+                index = (rr_node[to_node].ptc_num / (2 * pg_group_size))*(2 * pg_group_size) + i*2;
+                if (index >= chan_width_x[0]) {
+                    break;
+                }
+
+                pg_on += chanx_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][index];
+                debug[i] = index;
             }
         } else {
             for (i = 0; i < pg_group_size; i++) {
-                pg_on += chanx_occ[rr_node[to_node].xhigh][rr_node[to_node].ylow][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2 + 1];
+                index = (rr_node[to_node].ptc_num / (2 * pg_group_size))*(2 * pg_group_size) + i*2 + 1;
+                if (index >= chan_width_x[0]) {
+                    break;
+                }
+
+                pg_on += chanx_occ[rr_node[to_node].xhigh][rr_node[to_node].ylow][index];
+                debug[i] = index;
             }
         }
 
@@ -558,11 +571,23 @@ float get_pg_cost(int to_node)
     case CHANY:
         if (rr_node[to_node].direction == INC_DIRECTION) {
             for (i = 0; i < pg_group_size; i++) {
-                pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2];
+                index = (rr_node[to_node].ptc_num / (2 * pg_group_size))*(2 * pg_group_size) + i*2;
+                if (index >= chan_width_y[0]) {
+                    break;
+                }
+
+                pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][index];
+                debug[i] = index;
             }
         } else {
             for (i = 0; i < pg_group_size; i++) {
-                pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].yhigh][((rr_node[to_node].ptc_num / 2) / pg_group_size) + i*2 + 1];
+                index = (rr_node[to_node].ptc_num / (2 * pg_group_size))*(2 * pg_group_size) + i*2 + 1;
+                if (index >= chan_width_y[0]) {
+                    break;
+                }
+
+                pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].yhigh][index];
+                debug[i] = index;
             }
         }
 
