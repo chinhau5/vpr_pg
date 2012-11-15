@@ -281,8 +281,6 @@ main(int argc,
 	    init_graphics("VPR:  Versatile Place and Route for FPGAs");
 	    alloc_draw_structs();
 	}
-    
-    //print_grid_info();
 
     /* Do placement and routing */
     place_and_route(Operation, PlacerOpts, FileNameOpts.PlaceFile,

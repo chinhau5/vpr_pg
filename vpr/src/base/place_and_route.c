@@ -50,9 +50,6 @@ void post_place_sync(INP int num_blocks,
 
 void free_pb_data(t_pb *pb);
 
-extern int ****chanx_occ;
-extern int ****chany_occ;
-
 
 /************************* Subroutine Definitions ****************************/
 
@@ -268,8 +265,6 @@ place_and_route(enum e_operation operation,
 	#else
 		printf("Routing took %g seconds\n", (float)(end - begin) / CLK_PER_SEC);
 	#endif
-
-
 
     /*WMF: cleaning up memory usage */
     if(mst)

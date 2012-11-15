@@ -905,7 +905,6 @@ alloc_and_load_rr_graph(INP int num_nodes,
 						  Fc_xofs, Fc_yofs, rr_node,
 						  rr_edge_done, &clipped,
 						  rr_node_indices);
-				printf("build_unidir_rr_opins end\n");
 			    if(clipped)
 				{
 				    *Fc_clipped = TRUE;
@@ -1971,11 +1970,6 @@ load_uniform_switch_pattern(INP t_type_ptr type,
 			{
 			    tracks_connected_to_pin[ipin][ioff][iside]
 				[group_size * j + k] = itrack + k;
-
-				if (type == &type_descriptors[2]) {
-					assert (!strcmp(type->name, "clb"));
-					printf("[%d][%d][%d][%d] = %d\n", ipin, ioff, iside, group_size * j + k, itrack + k);
-				}
 			}
 		}
 	}

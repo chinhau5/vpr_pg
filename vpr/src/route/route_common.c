@@ -998,10 +998,9 @@ get_rr_cong_cost(int inode)
     }*/
 
     cost_index = rr_node[inode].cost_index;
-    cost = rr_indexed_data[cost_index].base_cost * (
+    cost = rr_indexed_data[cost_index].base_cost *
 	rr_node_route_inf[inode].acc_cost *
-	rr_node_route_inf[inode].pres_cost );//+ (1/pg_cost));
-    
+	rr_node_route_inf[inode].pres_cost;
     return (cost);
 }
 
@@ -1043,8 +1042,6 @@ node_to_heap(int inode,
  * timing-driven router -- the breadth-first router ignores them.           */
 
     struct s_heap *hptr;
-
-	//printf("[%d][%f] ", inode, cost);
 
     if(cost >= rr_node_route_inf[inode].path_cost)
 	return;

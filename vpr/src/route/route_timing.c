@@ -14,7 +14,7 @@
 #include "net_delay.h"
 #include "stats.h"
 
-#define PG
+//#define PG
 
 /******************** Subroutines local to route_timing.c ********************/
 
@@ -405,8 +405,6 @@ timing_driven_route_net(int inet,
 
         //heap head has the smallest cost
 	    current = get_heap_head();
-        
-        
 
 	    if(current == NULL)
 		{		/* Infeasible routing.  No possible path for net. */
@@ -546,11 +544,6 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 
     linked_rt_edge = rt_node->u.child_list;
 
-	
-
-	//since this function is only called
-	//assert (linked_rt_edge == NULL);
-	
     while(linked_rt_edge != NULL)
 	{
 	    child_node = linked_rt_edge->child;
@@ -559,6 +552,7 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 	    linked_rt_edge = linked_rt_edge->next;
 	}
 }
+
 
 static void
 timing_driven_expand_neighbours(struct s_heap *current,
@@ -578,7 +572,6 @@ timing_driven_expand_neighbours(struct s_heap *current,
     t_rr_type from_type, to_type;
     float new_tot_cost, old_back_pcost, new_back_pcost, R_upstream;
     float new_R_upstream, Tdel;
-    int temp;
 
     inode = current->index;
     old_back_pcost = current->backward_path_cost;
