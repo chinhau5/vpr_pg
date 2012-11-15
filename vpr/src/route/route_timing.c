@@ -14,7 +14,7 @@
 #include "net_delay.h"
 #include "stats.h"
 
-#define PG
+//#define PG
 
 /******************** Subroutines local to route_timing.c ********************/
 
