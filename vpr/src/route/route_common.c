@@ -51,7 +51,8 @@ static struct s_linked_f_pointer *linked_f_pointer_free_head = NULL;
 
 int ***chanx_occ = NULL; //[1..nx][0..ny][0..1], last index is the direction
 int ***chany_occ = NULL;
-const int pg_group_size = 32;
+boolean pg_enabled = FALSE;
+int pg_group_size = 16;
 int x_pg_regions, y_pg_regions;
 
 /*  The numbering relation between the channels and clbs is:               *
@@ -495,7 +496,7 @@ try_route(int width_fac,
 	    assert(router_opts.route_type != GLOBAL);
 	    success =
 		try_timing_driven_route(router_opts, net_slack, net_delay,
-					clb_opins_used_locally);
+					clb_opins_used_locally, pg_enabled);
 	}
     else
 	{			/* Directed Search Routability Driven */
@@ -535,7 +536,7 @@ float get_pg_cost(int to_node)
     int i, index;
     int pg_on = 0;
     float cost;
-    int debug[32];
+    //int debug[32];
 
     switch (rr_node[to_node].type) {
     case CHANX:
@@ -547,7 +548,7 @@ float get_pg_cost(int to_node)
                 }
 
                 pg_on += chanx_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][index];
-                debug[i] = index;
+                //debug[i] = index;
             }
         } else {
             for (i = 0; i < pg_group_size; i++) {
@@ -557,7 +558,7 @@ float get_pg_cost(int to_node)
                 }
 
                 pg_on += chanx_occ[rr_node[to_node].xhigh][rr_node[to_node].ylow][index];
-                debug[i] = index;
+                //debug[i] = index;
             }
         }
 
@@ -579,7 +580,7 @@ float get_pg_cost(int to_node)
                 }
 
                 pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].ylow][index];
-                debug[i] = index;
+                //debug[i] = index;
             }
         } else {
             for (i = 0; i < pg_group_size; i++) {
@@ -589,7 +590,7 @@ float get_pg_cost(int to_node)
                 }
 
                 pg_on += chany_occ[rr_node[to_node].xlow][rr_node[to_node].yhigh][index];
-                debug[i] = index;
+                //debug[i] = index;
             }
         }
 

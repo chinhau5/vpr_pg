@@ -14,8 +14,6 @@
 #include "net_delay.h"
 #include "stats.h"
 
-//#define PG
-
 /******************** Subroutines local to route_timing.c ********************/
 
 static int get_max_pins_per_net(void);
@@ -31,7 +29,8 @@ static void timing_driven_expand_neighbours(struct s_heap *current,
 					    float criticality_fac,
 					    int target_node,
 					    float astar_fac,
-						int highfanout_rlim);
+						int highfanout_rlim,
+                        boolean power);
 
 static float get_timing_driven_expected_cost(int inode,
 					     int target_node,
@@ -56,7 +55,8 @@ boolean
 try_timing_driven_route(struct s_router_opts router_opts,
 			float **net_slack,
 			float **net_delay,
-			t_ivec ** clb_opins_used_locally)
+			t_ivec ** clb_opins_used_locally,
+            boolean power)
 {
 
 /* Timing-driven routing algorithm.  The timing graph (includes net_slack)   *
@@ -132,7 +132,8 @@ try_timing_driven_route(struct s_router_opts router_opts,
 							sink_order,
 							rt_node_of_sink,
 							T_crit,
-							net_delay[inet]);
+							net_delay[inet],
+                            power);
 
 			    /* Impossible to route? (disconnected rr_graph) */
 
@@ -333,7 +334,8 @@ timing_driven_route_net(int inet,
 			int *sink_order,
 			t_rt_node ** rt_node_of_sink,
 			float T_crit,
-			float *net_delay)
+			float *net_delay,
+            boolean power)
 {
 
 /* Returns TRUE as long is found some way to hook up this net, even if that *
@@ -460,7 +462,8 @@ timing_driven_route_net(int inet,
 							    target_criticality,
 							    target_node,
 							    astar_fac,
-								highfanout_rlim);
+								highfanout_rlim,
+                                power);
 			}
 
 		    free_heap_data(current);
@@ -561,7 +564,8 @@ timing_driven_expand_neighbours(struct s_heap *current,
 				float criticality_fac,
 				int target_node,
 				float astar_fac,
-				int highfanout_rlim)
+				int highfanout_rlim,
+                boolean power)
 {
 
 /* Puts all the rr_nodes adjacent to current on the heap.  rr_nodes outside *
@@ -636,13 +640,13 @@ timing_driven_expand_neighbours(struct s_heap *current,
  * congestion cost of all the routing resources back to the existing route  *
  * plus the known delay of the total path back to the source.  new_tot_cost *
  * is this "known" backward cost + an expected cost to get to the target.   */
-#ifdef PG
-	    new_back_pcost = old_back_pcost + (1. - criticality_fac) *
-		get_rr_cong_cost(to_node) + get_pg_cost(to_node);
-#else
-        new_back_pcost = old_back_pcost + (1. - criticality_fac) *
-        get_rr_cong_cost(to_node);
-#endif
+        if (power) {
+            new_back_pcost = old_back_pcost + (1. - criticality_fac) *
+                get_rr_cong_cost(to_node) + get_pg_cost(to_node);
+        } else {
+            new_back_pcost = old_back_pcost + (1. - criticality_fac) *
+                get_rr_cong_cost(to_node);
+        }
 
 	    iswitch = rr_node[inode].switches[iconn];
 	    if(switch_inf[iswitch].buffered)

@@ -78,6 +78,9 @@ struct s_options
 	float astar_fac;
 	float criticality_exp;
 	float max_criticality;
+
+    /* Power gating options */
+    //int pg_size; //use global var for now
 	
     int Count[OT_BASE_UNKNOWN];
 };

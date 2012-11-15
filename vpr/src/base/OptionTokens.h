@@ -68,6 +68,8 @@ enum e_OptionBaseToken
 	OT_PACKER_ALGORITHM,
 	OT_HACK_NO_LEGAL_FRAC_LUT,
 	OT_HACK_SAFE_LATCH,
+    OT_PG_SIZE,
+    OT_PG_ENABLE,
     OT_BASE_UNKNOWN		/* Must be last since used for counting enum items */
 };
 

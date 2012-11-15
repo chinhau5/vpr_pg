@@ -71,6 +71,8 @@ const struct s_TokenPair OptionBaseTokenList[] = {
 	{"packer_algorithm", OT_PACKER_ALGORITHM},
     {"hack_no_legal_frac_lut", OT_HACK_NO_LEGAL_FRAC_LUT},
 	{"hack_safe_latch", OT_HACK_SAFE_LATCH},
+    {"pg_size", OT_PG_SIZE},
+    {"pg_enable", OT_PG_ENABLE},
     {NULL, OT_BASE_UNKNOWN}	/* End of list marker */
 };
 
