@@ -568,7 +568,7 @@ float get_pg_cost(int to_node)
         } else {
             cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
         }*/
-        cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * 20;
+        cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
         break;
 
     case CHANY:
@@ -600,7 +600,7 @@ float get_pg_cost(int to_node)
         } else {
             cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
         }*/
-        cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * 20;
+        cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
         break;
 
     default:
