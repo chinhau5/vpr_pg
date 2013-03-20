@@ -162,6 +162,7 @@ void print_grid_info()
 		}
 	}
 }
+//test
 
 /**
  * VPR program
