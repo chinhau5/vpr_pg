@@ -659,7 +659,7 @@ assign_blocks_and_route_net(t_type_ptr source_type,
 					   pin_criticality, sink_order,
 					   rt_node_of_sink, T_crit,
 					   net_delay[NET_USED],
-                       FALSE);
+                       TRUE);
 
     net_delay_value = net_delay[NET_USED][NET_USED_SINK_BLOCK];
 
@@ -1058,7 +1058,7 @@ compute_delta_io_to_io(struct s_router_opts router_opts,
     sink_x = 0;
     delta_x = abs(sink_x - source_x);
 
-
+    //from bottom right pad to all left vertical pads
     for(sink_y = 2; sink_y <= ny; sink_y++)
 	{
 	    delta_y = abs(sink_y - source_y);
@@ -1075,6 +1075,7 @@ compute_delta_io_to_io(struct s_router_opts router_opts,
     sink_x = nx + 1;
     delta_x = abs(sink_x - source_x);
 
+    //from bottom right pad to all right vertical pads
     for(sink_y = 1; sink_y <= ny; sink_y++)
 	{
 	    delta_y = abs(sink_y - source_y);

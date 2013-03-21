@@ -322,6 +322,35 @@ get_max_pins_per_net(void)
 }
 
 
+extern int ***chanx_occ;
+extern int ***chany_occ;
+
+void print_rr_node_type(t_rr_node *ptr)
+{
+    switch (ptr->type) {
+    case IPIN:
+        printf("IPIN");
+        break;
+    case OPIN:
+        printf("OPIN");
+        break;
+    case CHANX:
+        printf("CHANX");
+        break;
+    case CHANY:
+        printf("CHANY");
+        break;
+    case SOURCE:
+        printf("SOURCE");
+        break;
+    case SINK:
+        printf("SINK");
+        break;
+    default:
+        break;
+    }
+}
+
 boolean
 timing_driven_route_net(int inet,
 			float pres_fac,
@@ -352,10 +381,28 @@ timing_driven_route_net(int inet,
     struct s_trace *new_route_start_tptr;
 	int highfanout_rlim;
 
+    int i,j,k;
+
 /* Rip-up any old routing. */
 
     pathfinder_update_one_cost(trace_head[inet], -1, pres_fac);
     free_traceback(inet);
+
+    for (i = 1; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            for (k = 0; k <= chan_width_x[0] - 1; k++) {
+                assert(chanx_occ[i][j][k] == 0);
+            }
+        }
+    }
+
+    for (i = 0; i <= nx; i++) {
+        for (j = 1; j <= ny; j++) {
+            for (k = 0; k <= chan_width_y[0] - 1; k++) {
+                assert(chany_occ[i][j][k] == 0);
+            }
+        }
+    }
 
     for(ipin = 1; ipin <= clb_net[inet].num_sinks; ipin++)
 	{			/* For all sinks */
@@ -382,6 +429,7 @@ timing_driven_route_net(int inet,
     //init rt_root to contain only the source rr_node of the net with no child, child_list = NULL
     //re_expand is set to true, we always want to expand the root node, if not there's no child to go to
     //using alloc_rt_node here
+    //R_upstream = 0, C_downstream = 0, Tdel = 0
     rt_root = init_route_tree_to_source(inet);
     
     //route tree allows the path to be traced back
@@ -402,6 +450,7 @@ timing_driven_route_net(int inet,
 		//printf("[%d][%X] ", itarget, rt_root->u.child_list);
 		//printf("\nadd_route_tree_to_heap\n");
         //using alloc_heap_data here
+        //source node has total cost = 0 & backward path cost = 0
 	    add_route_tree_to_heap(rt_root, target_node, target_criticality,
 				   astar_fac);
 
@@ -419,6 +468,10 @@ timing_driven_route_net(int inet,
 
 	    while(inode != target_node)
 		{
+            printf("Current [%d,%e,%e]: ", inode, current->cost, current->backward_path_cost);
+            print_rr_node_type(&rr_node[inode]);
+            printf(" [%d,%d][%d,%d]\n", rr_node[inode].xlow, rr_node[inode].ylow, rr_node[inode].xhigh, rr_node[inode].yhigh);
+
             //initial path_cost is HUGE_FLOAT
 		    old_tcost = rr_node_route_inf[inode].path_cost;
 		    new_tcost = current->cost;
@@ -478,6 +531,8 @@ timing_driven_route_net(int inet,
 
 		    inode = current->index;
 		} //end while(inode != target_node)
+
+        printf("\n");
 
 /* NB:  In the code below I keep two records of the partial routing:  the   *
  * traceback and the route_tree.  The route_tree enables fast recomputation *
@@ -680,12 +735,17 @@ timing_driven_expand_neighbours(struct s_heap *current,
 						criticality_fac,
 						new_R_upstream);
 
+        printf("Neighbour [%d,%e,%e]: ", to_node, new_tot_cost, new_back_pcost);
+        print_rr_node_type(&rr_node[to_node]);
+        printf(" [%d,%d][%d,%d]\n", rr_node[to_node].xlow, rr_node[to_node].ylow, rr_node[to_node].xhigh, rr_node[to_node].yhigh);
+
 	    node_to_heap(to_node, new_tot_cost, inode, iconn, new_back_pcost,
 			 new_R_upstream);
 
 	}			/* End for all neighbours */
 }
 
+extern int pg_group_size;
 
 static float
 get_timing_driven_expected_cost(int inode,
@@ -701,6 +761,7 @@ get_timing_driven_expected_cost(int inode,
     t_rr_type rr_type;
     int cost_index, ortho_cost_index, num_segs_same_dir, num_segs_ortho_dir;
     float expected_cost, cong_cost, Tdel;
+    float pg_cost;
 
     rr_type = rr_node[inode].type;
 
@@ -714,8 +775,7 @@ get_timing_driven_expected_cost(int inode,
 
 	    cong_cost =
 		num_segs_same_dir * rr_indexed_data[cost_index].base_cost +
-		num_segs_ortho_dir *
-		rr_indexed_data[ortho_cost_index].base_cost;
+		num_segs_ortho_dir * rr_indexed_data[ortho_cost_index].base_cost;
 	    cong_cost +=
 		rr_indexed_data[IPIN_COST_INDEX].base_cost +
 		rr_indexed_data[SINK_COST_INDEX].base_cost;
@@ -734,8 +794,12 @@ get_timing_driven_expected_cost(int inode,
 
 	    Tdel += rr_indexed_data[IPIN_COST_INDEX].T_linear;
 
+        //conservative estimation (all pg region are unused)
+        pg_cost = num_segs_same_dir * rr_indexed_data[cost_index].base_cost * pg_group_size +
+            num_segs_ortho_dir * rr_indexed_data[ortho_cost_index].base_cost * pg_group_size;
+
 	    expected_cost =
-		criticality_fac * Tdel + (1. - criticality_fac) * cong_cost;
+		criticality_fac * Tdel + (1. - criticality_fac) * cong_cost + pg_cost;
 	    return (expected_cost);
 	}
 
