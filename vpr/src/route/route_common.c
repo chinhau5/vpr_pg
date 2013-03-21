@@ -51,8 +51,6 @@ static struct s_linked_f_pointer *linked_f_pointer_free_head = NULL;
 
 int ***chanx_occ = NULL; //[1..nx][0..ny][0..1], last index is the direction
 int ***chany_occ = NULL;
-boolean pg_enabled = FALSE;
-int pg_group_size = 16;
 int x_pg_regions, y_pg_regions;
 
 /*  The numbering relation between the channels and clbs is:               *
@@ -308,7 +306,7 @@ void alloc_chan_occ(enum e_directionality directionality)
     }*/
 }
 
-void calc_pg_efficiency()
+void calc_pg_efficiency(int pg_group_size)
 {
     int i, j, k;
     int inc_on, dec_on;
@@ -496,7 +494,7 @@ try_route(int width_fac,
 	    assert(router_opts.route_type != GLOBAL);
 	    success =
 		try_timing_driven_route(router_opts, net_slack, net_delay,
-					clb_opins_used_locally, pg_enabled);
+					clb_opins_used_locally);
 	}
     else
 	{			/* Directed Search Routability Driven */
@@ -531,7 +529,7 @@ feasible_routing(void)
     return (TRUE);
 }
 
-float get_pg_cost(int to_node)
+float get_pg_cost(int to_node, int pg_group_size)
 {
     int i, index;
     int pg_on = 0;

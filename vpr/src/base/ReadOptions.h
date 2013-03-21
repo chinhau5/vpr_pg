@@ -80,7 +80,8 @@ struct s_options
 	float max_criticality;
 
     /* Power gating options */
-    //int pg_size; //use global var for now
+    boolean enable_pg;
+    int pg_group_size;
 	
     int Count[OT_BASE_UNKNOWN];
 };

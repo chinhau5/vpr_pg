@@ -102,8 +102,6 @@ ReadOptions(INP int argc,
 	free(head);
 }
 
-extern int pg_group_size;
-extern boolean pg_enabled;
 
 static const char *const *
 ProcessOption(INP const char *const *Args,
@@ -265,10 +263,9 @@ ProcessOption(INP const char *const *Args,
 
     /* Power gating option */
     case OT_PG_SIZE:
-        return ReadInt(Args, &pg_group_size);
+        return ReadInt(Args, &Options->pg_group_size);
     case OT_PG_ENABLE:
-        pg_enabled = TRUE;
-        return Args;
+        return ReadOnOff(Args, &Options->enable_pg);
 	default:
 	    ErrorOption(*PrevArgs);
 	}

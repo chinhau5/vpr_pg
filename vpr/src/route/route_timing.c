@@ -21,7 +21,9 @@ static int get_max_pins_per_net(void);
 static void add_route_tree_to_heap(t_rt_node * rt_node,
 				   int target_node,
 				   float target_criticality,
-				   float astar_fac);
+				   float astar_fac,
+                   boolean enable_pg,
+                   int pg_group_size);
 
 static void timing_driven_expand_neighbours(struct s_heap *current,
 					    int inet,
@@ -30,12 +32,15 @@ static void timing_driven_expand_neighbours(struct s_heap *current,
 					    int target_node,
 					    float astar_fac,
 						int highfanout_rlim,
-                        boolean power);
+                        boolean enable_pg,
+                        int pg_group_size);
 
 static float get_timing_driven_expected_cost(int inode,
 					     int target_node,
 					     float criticality_fac,
-					     float R_upstream);
+					     float R_upstream,
+                         boolean enable_pg,
+                         int pg_group_size);
 
 static int get_expected_segs_to_target(int inode,
 				       int target_node,
@@ -55,8 +60,7 @@ boolean
 try_timing_driven_route(struct s_router_opts router_opts,
 			float **net_slack,
 			float **net_delay,
-			t_ivec ** clb_opins_used_locally,
-            boolean power)
+			t_ivec ** clb_opins_used_locally)
 {
 
 /* Timing-driven routing algorithm.  The timing graph (includes net_slack)   *
@@ -133,7 +137,8 @@ try_timing_driven_route(struct s_router_opts router_opts,
 							rt_node_of_sink,
 							T_crit,
 							net_delay[inet],
-                            power);
+                            router_opts.enable_pg,
+                            router_opts.pg_group_size);
 
 			    /* Impossible to route? (disconnected rr_graph) */
 
@@ -217,7 +222,7 @@ try_timing_driven_route(struct s_router_opts router_opts,
 #endif
 			free(net_index);
 			free(sinks);
-            calc_pg_efficiency();
+            calc_pg_efficiency(router_opts.pg_group_size);
 
 		    return (TRUE);
 		}
@@ -364,7 +369,8 @@ timing_driven_route_net(int inet,
 			t_rt_node ** rt_node_of_sink,
 			float T_crit,
 			float *net_delay,
-            boolean power)
+            boolean enable_pg,
+            int pg_group_size)
 {
 
 /* Returns TRUE as long is found some way to hook up this net, even if that *
@@ -452,7 +458,7 @@ timing_driven_route_net(int inet,
         //using alloc_heap_data here
         //source node has total cost = 0 & backward path cost = 0
 	    add_route_tree_to_heap(rt_root, target_node, target_criticality,
-				   astar_fac);
+				   astar_fac, enable_pg, pg_group_size);
 
         //heap head has the smallest cost
 	    current = get_heap_head();
@@ -516,7 +522,8 @@ timing_driven_route_net(int inet,
 							    target_node,
 							    astar_fac,
 								highfanout_rlim,
-                                power);
+                                enable_pg,
+                                pg_group_size);
 			}
 
 		    free_heap_data(current);
@@ -568,7 +575,9 @@ static void
 add_route_tree_to_heap(t_rt_node * rt_node,
 		       int target_node,
 		       float target_criticality,
-		       float astar_fac)
+               float astar_fac,
+               boolean enable_pg,
+               int pg_group_size)
 {
 
 /* Puts the entire partial routing below and including rt_node onto the heap *
@@ -592,7 +601,9 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 		astar_fac * get_timing_driven_expected_cost(inode,
 							    target_node,
 							    target_criticality,
-							    R_upstream);
+							    R_upstream,
+                                enable_pg,
+                                pg_group_size);
 //#ifdef PG
 //        tot_cost += get_pg_cost(inode);
 //#endif
@@ -606,7 +617,7 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 	{
 	    child_node = linked_rt_edge->child;
 	    add_route_tree_to_heap(child_node, target_node,
-				   target_criticality, astar_fac);
+				   target_criticality, astar_fac, enable_pg, pg_group_size);
 	    linked_rt_edge = linked_rt_edge->next;
 	}
 }
@@ -620,7 +631,8 @@ timing_driven_expand_neighbours(struct s_heap *current,
 				int target_node,
 				float astar_fac,
 				int highfanout_rlim,
-                boolean power)
+                boolean enable_pg,
+                int pg_group_size)
 {
 
 /* Puts all the rr_nodes adjacent to current on the heap.  rr_nodes outside *
@@ -695,9 +707,9 @@ timing_driven_expand_neighbours(struct s_heap *current,
  * congestion cost of all the routing resources back to the existing route  *
  * plus the known delay of the total path back to the source.  new_tot_cost *
  * is this "known" backward cost + an expected cost to get to the target.   */
-        if (power) {
+        if (enable_pg) {
             new_back_pcost = old_back_pcost + (1. - criticality_fac) *
-                get_rr_cong_cost(to_node) + get_pg_cost(to_node);
+                get_rr_cong_cost(to_node) + get_pg_cost(to_node, pg_group_size);
         } else {
             new_back_pcost = old_back_pcost + (1. - criticality_fac) *
                 get_rr_cong_cost(to_node);
@@ -733,7 +745,9 @@ timing_driven_expand_neighbours(struct s_heap *current,
 	    new_tot_cost = new_back_pcost + astar_fac *
 		get_timing_driven_expected_cost(to_node, target_node,
 						criticality_fac,
-						new_R_upstream);
+						new_R_upstream,
+                        enable_pg,
+                        pg_group_size);
 
         /*printf("Neighbour [%d,%e,%e]: ", to_node, new_tot_cost, new_back_pcost);
         print_rr_node_type(&rr_node[to_node]);
@@ -745,13 +759,13 @@ timing_driven_expand_neighbours(struct s_heap *current,
 	}			/* End for all neighbours */
 }
 
-extern int pg_group_size;
-
 static float
 get_timing_driven_expected_cost(int inode,
 				int target_node,
 				float criticality_fac,
-				float R_upstream)
+				float R_upstream,
+                boolean enable_pg,
+                int pg_group_size)
 {
 
 /* Determines the expected cost (due to both delay and resouce cost) to reach *
@@ -775,7 +789,8 @@ get_timing_driven_expected_cost(int inode,
 
 	    cong_cost =
 		num_segs_same_dir * rr_indexed_data[cost_index].base_cost +
-		num_segs_ortho_dir * rr_indexed_data[ortho_cost_index].base_cost;
+		num_segs_ortho_dir *
+		rr_indexed_data[ortho_cost_index].base_cost;
 	    cong_cost +=
 		rr_indexed_data[IPIN_COST_INDEX].base_cost +
 		rr_indexed_data[SINK_COST_INDEX].base_cost;
@@ -795,8 +810,13 @@ get_timing_driven_expected_cost(int inode,
 	    Tdel += rr_indexed_data[IPIN_COST_INDEX].T_linear;
 
         //conservative estimation (all pg region are unused)
-        pg_cost = num_segs_same_dir * rr_indexed_data[cost_index].base_cost * pg_group_size +
+        /*if (enable_pg) {
+            pg_cost = num_segs_same_dir * rr_indexed_data[cost_index].base_cost * pg_group_size +
             num_segs_ortho_dir * rr_indexed_data[ortho_cost_index].base_cost * pg_group_size;
+        } else {
+            pg_cost = 0;
+        }*/
+        pg_cost = 0;
 
 	    expected_cost =
 		criticality_fac * Tdel + (1. - criticality_fac) * cong_cost + pg_cost;

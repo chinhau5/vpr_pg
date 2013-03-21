@@ -659,7 +659,8 @@ assign_blocks_and_route_net(t_type_ptr source_type,
 					   pin_criticality, sink_order,
 					   rt_node_of_sink, T_crit,
 					   net_delay[NET_USED],
-                       TRUE);
+                       router_opts.enable_pg,
+                       router_opts.pg_group_size);
 
     net_delay_value = net_delay[NET_USED][NET_USED_SINK_BLOCK];
 

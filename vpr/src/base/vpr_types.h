@@ -538,6 +538,8 @@ struct s_router_opts
 	boolean verify_binary_search;
 	boolean full_stats;
 	boolean doRouting;
+    boolean enable_pg;
+    int pg_group_size;
 };
 
 /* All the parameters controlling the router's operation are in this        *
