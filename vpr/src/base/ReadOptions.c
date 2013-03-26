@@ -264,7 +264,7 @@ ProcessOption(INP const char *const *Args,
     /* Power gating option */
     case OT_PG_SIZE:
         return ReadInt(Args, &Options->pg_group_size);
-    case OT_PG_ENABLE:
+    case OT_ENABLE_PG:
         return ReadOnOff(Args, &Options->enable_pg);
 	default:
 	    ErrorOption(*PrevArgs);

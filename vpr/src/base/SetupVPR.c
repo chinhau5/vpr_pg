@@ -460,7 +460,7 @@ SetupRouterOpts(INP t_options Options,
     
 	RouterOpts->enable_pg = FALSE;
     RouterOpts->pg_group_size = 1;
-	if(Options.Count[OT_PG_ENABLE])
+	if(Options.Count[OT_ENABLE_PG])
 	{
 	    RouterOpts->enable_pg = Options.enable_pg;
         RouterOpts->pg_group_size = Options.pg_group_size;

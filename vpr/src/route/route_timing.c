@@ -387,7 +387,10 @@ timing_driven_route_net(int inet,
     struct s_trace *new_route_start_tptr;
 	int highfanout_rlim;
 
-    int i,j,k;
+    struct s_trace *tptr;
+    char *name_type[] =
+    { "SOURCE", "SINK", "IPIN", "OPIN", "CHANX", "CHANY", "INTRA_CLUSTER_EDGE" };
+    //int i,j,k;
 
 /* Rip-up any old routing. */
 
@@ -474,9 +477,9 @@ timing_driven_route_net(int inet,
 
 	    while(inode != target_node)
 		{
-            /*printf("Current [%d,%e,%e]: ", inode, current->cost, current->backward_path_cost);
+            printf("Current [%d,%e,%e]: ", inode, current->cost, current->backward_path_cost);
             print_rr_node_type(&rr_node[inode]);
-            printf(" [%d,%d][%d,%d]\n", rr_node[inode].xlow, rr_node[inode].ylow, rr_node[inode].xhigh, rr_node[inode].yhigh);*/
+            printf(" [%d,%d][%d,%d]\n", rr_node[inode].xlow, rr_node[inode].ylow, rr_node[inode].xhigh, rr_node[inode].yhigh);
 
             //initial path_cost is HUGE_FLOAT
 		    old_tcost = rr_node_route_inf[inode].path_cost;
@@ -539,7 +542,7 @@ timing_driven_route_net(int inet,
 		    inode = current->index;
 		} //end while(inode != target_node)
 
-        //printf("\n");
+        printf("\n");
 
 /* NB:  In the code below I keep two records of the partial routing:  the   *
  * traceback and the route_tree.  The route_tree enables fast recomputation *
@@ -551,6 +554,18 @@ timing_driven_route_net(int inet,
 
 	    rr_node_route_inf[inode].target_flag--;	/* Connected to this SINK. */
 	    new_route_start_tptr = update_traceback(current, inet);
+
+        tptr = new_route_start_tptr;
+
+        printf("Route:\n");
+
+        while (tptr) {
+            printf("[%d] %s [%d,%d][%d,%d]\n", tptr->index, name_type[rr_node[tptr->index].type], rr_node[tptr->index].xlow, rr_node[tptr->index].ylow, 
+                rr_node[tptr->index].xhigh, rr_node[tptr->index].yhigh); 
+            tptr = tptr->next;
+        }
+
+        printf("\n");
 
 		//rt_root->u.child_list is updated by update_route_tree!!, "current" will point to the sink here
         //update_route_tree traces back using rr_node_route_inf
@@ -749,9 +764,9 @@ timing_driven_expand_neighbours(struct s_heap *current,
                         enable_pg,
                         pg_group_size);
 
-        /*printf("Neighbour [%d,%e,%e]: ", to_node, new_tot_cost, new_back_pcost);
+        printf("Neighbour [%d,%e,%e]: ", to_node, new_tot_cost, new_back_pcost);
         print_rr_node_type(&rr_node[to_node]);
-        printf(" [%d,%d][%d,%d]\n", rr_node[to_node].xlow, rr_node[to_node].ylow, rr_node[to_node].xhigh, rr_node[to_node].yhigh);*/
+        printf(" [%d,%d][%d,%d]\n", rr_node[to_node].xlow, rr_node[to_node].ylow, rr_node[to_node].xhigh, rr_node[to_node].yhigh);
 
 	    node_to_heap(to_node, new_tot_cost, inode, iconn, new_back_pcost,
 			 new_R_upstream);
