@@ -14,6 +14,8 @@
 #include "net_delay.h"
 #include "stats.h"
 
+//#define PRINT_EXPANSION
+
 /******************** Subroutines local to route_timing.c ********************/
 
 static int get_max_pins_per_net(void);
@@ -53,8 +55,44 @@ static void timing_driven_check_net_delays(float **net_delay);
 
 static int mark_node_expansion_by_bin(int inet, int target_node, t_rt_node * rt_node);
 
+extern int ****sb_occ;
 
 /************************ Subroutine definitions *****************************/
+
+void print_sb_occ()
+{
+    int i, j, k, l;
+    FILE *sb_dump = fopen("sb_dump.log", "w");
+    for (i = 0; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            fprintf(sb_dump, "SB (%d,%d)\n", i, j);
+            for (k = 0; k < 4; k++) {
+                for (l = 0; l < chan_width_x[0]; l++) {
+                    //assert(sb_occ[i][j][k][l] >= 0);
+                    if (sb_occ[i][j][k][l] > 0) {
+                        //assert(sb_occ[i][j][k][l] == 1);
+                        switch (k) {
+                        case 0:
+                            fprintf(sb_dump, "West "); break;
+                        case 1:
+                            fprintf(sb_dump, "North "); break;
+                        case 2:
+                            fprintf(sb_dump, "East "); break;
+                        case 3:
+                            fprintf(sb_dump, "South "); break;
+                        default:
+                            break;
+                        }
+                        fprintf(sb_dump, "Track %d: %d\n", l, sb_occ[i][j][k][l]);
+                    }
+                }
+            }
+            fprintf(sb_dump, "\n");
+        }
+    }
+    fprintf(sb_dump, "\n");
+    fclose(sb_dump);
+}
 
 boolean
 try_timing_driven_route(struct s_router_opts router_opts,
@@ -223,6 +261,7 @@ try_timing_driven_route(struct s_router_opts router_opts,
 			free(net_index);
 			free(sinks);
             calc_pg_efficiency(router_opts.pg_group_size);
+            print_sb_occ();
 
 		    return (TRUE);
 		}
@@ -477,10 +516,11 @@ timing_driven_route_net(int inet,
 
 	    while(inode != target_node)
 		{
+#ifdef PRINT_EXPANSION
             printf("Current [%d,%e,%e]: ", inode, current->cost, current->backward_path_cost);
             print_rr_node_type(&rr_node[inode]);
             printf(" [%d,%d][%d,%d]\n", rr_node[inode].xlow, rr_node[inode].ylow, rr_node[inode].xhigh, rr_node[inode].yhigh);
-
+#endif
             //initial path_cost is HUGE_FLOAT
 		    old_tcost = rr_node_route_inf[inode].path_cost;
 		    new_tcost = current->cost;
@@ -542,8 +582,9 @@ timing_driven_route_net(int inet,
 		    inode = current->index;
 		} //end while(inode != target_node)
 
+#ifdef PRINT_EXPANSION
         printf("\n");
-
+#endif
 /* NB:  In the code below I keep two records of the partial routing:  the   *
  * traceback and the route_tree.  The route_tree enables fast recomputation *
  * of the Elmore delay to each node in the partial routing.  The traceback  *
@@ -557,6 +598,7 @@ timing_driven_route_net(int inet,
 
         tptr = new_route_start_tptr;
 
+#ifdef PRINT_EXPANSION
         printf("Route:\n");
 
         while (tptr) {
@@ -566,6 +608,7 @@ timing_driven_route_net(int inet,
         }
 
         printf("\n");
+#endif
 
 		//rt_root->u.child_list is updated by update_route_tree!!, "current" will point to the sink here
         //update_route_tree traces back using rr_node_route_inf
@@ -763,11 +806,11 @@ timing_driven_expand_neighbours(struct s_heap *current,
 						new_R_upstream,
                         enable_pg,
                         pg_group_size);
-
+#ifdef PRINT_EXPANSION
         printf("Neighbour [%d,%e,%e]: ", to_node, new_tot_cost, new_back_pcost);
         print_rr_node_type(&rr_node[to_node]);
         printf(" [%d,%d][%d,%d]\n", rr_node[to_node].xlow, rr_node[to_node].ylow, rr_node[to_node].xhigh, rr_node[to_node].yhigh);
-
+#endif
 	    node_to_heap(to_node, new_tot_cost, inode, iconn, new_back_pcost,
 			 new_R_upstream);
 
@@ -826,8 +869,8 @@ get_timing_driven_expected_cost(int inode,
 
         //conservative estimation (all pg region are unused)
         /*if (enable_pg) {
-            pg_cost = num_segs_same_dir * rr_indexed_data[cost_index].base_cost * pg_group_size +
-            num_segs_ortho_dir * rr_indexed_data[ortho_cost_index].base_cost * pg_group_size;
+            pg_cost = num_segs_same_dir * rr_indexed_data[cost_index].base_cost * exp(-pg_group_size) * pg_group_size +
+            num_segs_ortho_dir * rr_indexed_data[ortho_cost_index].base_cost * exp(-pg_group_size) * pg_group_size;
         } else {
             pg_cost = 0;
         }*/

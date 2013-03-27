@@ -51,6 +51,7 @@ static struct s_linked_f_pointer *linked_f_pointer_free_head = NULL;
 
 int ***chanx_occ = NULL; //[1..nx][0..ny][0..1], last index is the direction
 int ***chany_occ = NULL;
+int ****sb_occ = NULL; //[0..nx][0..ny][0..3][chan_width/2/pg_group_size]
 int x_pg_regions, y_pg_regions;
 
 /*  The numbering relation between the channels and clbs is:               *
@@ -277,6 +278,17 @@ void alloc_chan_occ(enum e_directionality directionality)
         for (j = 1; j <= ny; j++) {
             for (k = 0; k <= chan_width_y[0] - 1; k++) {
                 chany_occ[i][j][k] = 0;
+            }
+        }
+    }
+
+    sb_occ = (int ****)alloc_matrix4(0, nx, 0, ny, 0, 3, 0, chan_width_x[0]-1, sizeof(int));
+    for (i = 0; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            for (k = 0; k < 4; k++) {
+                for (l = 0; l < chan_width_x[0]; l++) {
+                    sb_occ[i][j][k][l] = 0;
+                }
             }
         }
     }
@@ -566,7 +578,7 @@ float get_pg_cost(int to_node, int pg_group_size)
         } else {
             cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
         }*/
-        //assert(pg_on == 0);
+        //assert(pg_on <= pg_group_size);
         cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
         break;
 
@@ -599,7 +611,7 @@ float get_pg_cost(int to_node, int pg_group_size)
         } else {
             cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
         }*/
-        //assert(pg_on == 0);
+        //assert(pg_on <= pg_group_size);
         cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
         break;
 
@@ -660,7 +672,7 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
 
     struct s_trace *tptr;
     int inode, occ, capacity, next_inode, dir;
-    int i, ilow, ihigh;
+    int i, x, y;
 
     tptr = route_segment_start;
     if(tptr == NULL)		/* No routing yet. */
@@ -670,7 +682,118 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
 	{
 	    inode = tptr->index;
 
-        if (rr_node[inode].type == CHANX) {
+        //START NEW COST FUNCTION
+        if (rr_node[inode].type == OPIN) {
+            if (tptr->next) {
+                next_inode = tptr->next->index;
+
+                switch (rr_node[next_inode].type) {
+                case CHANX:
+                    //need to use next_inode because OPIN has no direction
+                    y = rr_node[next_inode].ylow;
+                    if (rr_node[next_inode].direction == INC_DIRECTION) {
+                        dir = 0;
+                        x = rr_node[next_inode].xlow-1;
+                    } else {
+                        dir = 2;
+                        x = rr_node[next_inode].xhigh;
+                    }
+                    assert(x != -1 && y != -1);
+                    break;
+
+                case CHANY:
+                    x = rr_node[next_inode].xlow;
+                    //need to use next_inode because OPIN has no direction
+                    if (rr_node[next_inode].direction == INC_DIRECTION) {
+                        dir = 3;
+                        y = rr_node[next_inode].ylow-1;
+                    } else {
+                        dir = 1;
+                        y = rr_node[next_inode].yhigh;
+                    }
+                    assert(x != -1 && y != -1);
+                    break;
+                
+                default:
+                    x = y = -1;
+                    break;
+                }
+
+                if (x != -1 && y != -1) {
+                    sb_occ[x][y][dir][rr_node[next_inode].ptc_num] += add_or_sub;
+                }
+            }
+        }
+        else if (rr_node[inode].type == CHANX) {
+            if (tptr->next) {
+                next_inode = tptr->next->index;
+
+                if (rr_node[inode].direction == INC_DIRECTION) {
+                    dir = 0;
+                } else {
+                    dir = 2;
+                }
+
+                switch (rr_node[next_inode].type) {
+                case CHANX:
+                    if (rr_node[inode].direction == INC_DIRECTION) {
+                        x = rr_node[next_inode].xlow-1;
+                    } else {
+                        x = rr_node[next_inode].xhigh;
+                    }
+                    break;
+
+                case CHANY:
+                    x = rr_node[next_inode].xlow;
+                    break;
+
+                /*case IPIN: //TODO: check this (i don't think this case is necessarry)
+                    ilow = rr_node[next_inode].xlow;
+                    break;*/
+                
+                default:
+                    x = y = -1;
+                    break;
+                }
+
+                if (x != -1) {
+                    sb_occ[x][rr_node[inode].ylow][dir][rr_node[inode].ptc_num] += add_or_sub;
+                }
+            }
+        } else if (rr_node[inode].type == CHANY) {
+            if (tptr->next) {
+                next_inode = tptr->next->index;
+
+                if (rr_node[inode].direction == INC_DIRECTION) {
+                    dir = 3;
+                } else {
+                    dir = 1;
+                }
+
+                switch (rr_node[next_inode].type) {
+                case CHANX:
+                    y = rr_node[next_inode].ylow;
+                    break;
+
+                case CHANY:
+                    if (rr_node[inode].direction == INC_DIRECTION) {
+                        y = rr_node[next_inode].ylow-1;
+                    } else {
+                        y = rr_node[next_inode].yhigh;
+                    }
+                    break;
+
+                default:
+                    x = y = -1;
+                    break;
+                }
+
+                if (y != -1) {
+                    sb_occ[rr_node[inode].xlow][y][dir][rr_node[inode].ptc_num] += add_or_sub;
+                }
+            } //end if (tptr->next)
+        }
+        /*if (rr_node[inode].type == CHANX) {
             if (tptr->next) {
                 next_inode = tptr->next->index;
                 dir = rr_node[inode].direction == INC_DIRECTION ? 0 : 1;
@@ -713,6 +836,9 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                         //chanx_occ[i][rr_node[inode].ylow][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size] += add_or_sub;
                         chanx_occ[i][rr_node[inode].ylow][rr_node[inode].ptc_num] += add_or_sub;
                     }
+                    //the buffers at the intermediate switch boxes are not turned on
+                    //chanx_occ[ilow][rr_node[inode].ylow][rr_node[inode].ptc_num] += add_or_sub;
+                    //chanx_occ[ihigh][rr_node[inode].ylow][rr_node[inode].ptc_num] += add_or_sub;
                 }
             }
         } else if (rr_node[inode].type == CHANY) {
@@ -759,9 +885,13 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                         //chany_occ[rr_node[inode].xlow][i][rr_node[inode].direction == INC_DIRECTION ? 0 : 1][(rr_node[inode].ptc_num / 2) / pg_group_size] += add_or_sub;
                         chany_occ[rr_node[inode].xlow][i][rr_node[inode].ptc_num] += add_or_sub;
                     }
+                    //the buffers at the intermediate switch boxes are not turned on
+                    //chany_occ[rr_node[inode].xlow][ilow][rr_node[inode].ptc_num] += add_or_sub;
+                    //chany_occ[rr_node[inode].xlow][ihigh][rr_node[inode].ptc_num] += add_or_sub;
                 }
             } //end if (tptr->next)
-        }
+        }*/
+        //END NEW COST FUNCTION
 
 	    occ = rr_node[inode].occ + add_or_sub;
 	    capacity = rr_node[inode].capacity;
