@@ -543,12 +543,83 @@ feasible_routing(void)
 
 float get_pg_cost(int to_node, int pg_group_size)
 {
-    int i, index;
+    int i, index, dir;
     int pg_on = 0;
     float cost;
-    //int debug[32];
 
     switch (rr_node[to_node].type) {
+    case CHANX:
+        if (rr_node[to_node].direction == INC_DIRECTION) {
+            for (i = 0; i < pg_group_size; i++) {
+                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2;
+                if (index >= chan_width_x[0]) {
+                    break;
+                }
+
+                pg_on += sb_occ[rr_node[to_node].xlow-1][rr_node[to_node].ylow][0][index];
+                //debug[i] = index;
+            }
+        } else {
+            for (i = 0; i < pg_group_size; i++) {
+                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2 + 1;
+                if (index >= chan_width_x[0]) {
+                    break;
+                }
+
+                pg_on += sb_occ[rr_node[to_node].xhigh][rr_node[to_node].ylow][2][index];
+                //debug[i] = index;
+            }
+        }
+
+        //if (pg_on == 0) {
+        //    //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+        //} else {
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+        //}
+        //assert(pg_on <= pg_group_size);
+        cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
+        break;
+
+    case CHANY:
+        if (rr_node[to_node].direction == INC_DIRECTION) {
+            for (i = 0; i < pg_group_size; i++) {
+                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2;
+                if (index >= chan_width_y[0]) {
+                    break;
+                }
+
+                pg_on += sb_occ[rr_node[to_node].xlow][rr_node[to_node].ylow-1][3][index];
+                //debug[i] = index;
+            }
+        } else {
+            for (i = 0; i < pg_group_size; i++) {
+                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2 + 1;
+                if (index >= chan_width_y[0]) {
+                    break;
+                }
+
+                pg_on += sb_occ[rr_node[to_node].xlow][rr_node[to_node].yhigh][1][index];
+                //debug[i] = index;
+            }
+        }
+
+        //if (pg_on == 0) {
+        //    //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+        //} else {
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+        //}
+        //assert(pg_on <= pg_group_size);
+        cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
+        break;
+
+    default:
+        cost = 0;
+        break;
+    }
+
+    /*switch (rr_node[to_node].type) {
     case CHANX:
         if (rr_node[to_node].direction == INC_DIRECTION) {
             for (i = 0; i < pg_group_size; i++) {
@@ -572,12 +643,12 @@ float get_pg_cost(int to_node, int pg_group_size)
             }
         }
 
-        /*if (pg_on == 0) {
-            //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
-            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
-        } else {
-            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
-        }*/
+        //if (pg_on == 0) {
+        //    //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+        //} else {
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+        //}
         //assert(pg_on <= pg_group_size);
         cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
         break;
@@ -605,12 +676,12 @@ float get_pg_cost(int to_node, int pg_group_size)
             }
         }
 
-        /*if (pg_on == 0) {
-            //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
-            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
-        } else {
-            cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
-        }*/
+        //if (pg_on == 0) {
+        //    //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+        //} else {
+        //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+        //}
         //assert(pg_on <= pg_group_size);
         cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
         break;
@@ -618,7 +689,7 @@ float get_pg_cost(int to_node, int pg_group_size)
     default:
         cost = 0;
         break;
-    }
+    }*/
 
     /*if (rr_node[inode].type == CHANX) {
         
@@ -698,7 +769,7 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                         dir = 2;
                         x = rr_node[next_inode].xhigh;
                     }
-                    assert(x != -1 && y != -1);
+                    assert(x >= 0);
                     break;
 
                 case CHANY:
@@ -711,15 +782,15 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                         dir = 1;
                         y = rr_node[next_inode].yhigh;
                     }
-                    assert(x != -1 && y != -1);
+                    assert(y >= 0);
                     break;
                 
                 default:
-                    x = y = -1;
+                    dir = -1;
                     break;
                 }
 
-                if (x != -1 && y != -1) {
+                if (dir != -1) {
                     sb_occ[x][y][dir][rr_node[next_inode].ptc_num] += add_or_sub;
                 }
             }
@@ -741,18 +812,15 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                     } else {
                         x = rr_node[next_inode].xhigh;
                     }
+                    assert(x >= 0);
                     break;
 
                 case CHANY:
                     x = rr_node[next_inode].xlow;
                     break;
-
-                /*case IPIN: //TODO: check this (i don't think this case is necessarry)
-                    ilow = rr_node[next_inode].xlow;
-                    break;*/
                 
                 default:
-                    x = y = -1;
+                    x = -1;
                     break;
                 }
 
@@ -781,17 +849,18 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
                     } else {
                         y = rr_node[next_inode].yhigh;
                     }
+                    assert(y >= 0);
                     break;
 
                 default:
-                    x = y = -1;
+                    y = -1;
                     break;
                 }
 
                 if (y != -1) {
                     sb_occ[rr_node[inode].xlow][y][dir][rr_node[inode].ptc_num] += add_or_sub;
                 }
-            } //end if (tptr->next)
+            }
         }
         /*if (rr_node[inode].type == CHANX) {
             if (tptr->next) {
