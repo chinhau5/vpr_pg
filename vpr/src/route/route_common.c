@@ -320,7 +320,7 @@ void alloc_chan_occ(enum e_directionality directionality)
 
 void calc_pg_efficiency(int pg_group_size)
 {
-    int i, j, k;
+    int i, j, k, l;
     int inc_on, dec_on;
     int *pg_inc_on, *pg_dec_on;
     int num_pg_regions;
@@ -336,7 +336,42 @@ void calc_pg_efficiency(int pg_group_size)
     average = 0;
     count = 0;
 
-    for (i = 1; i <= nx; i++) {
+    for (i = 0; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            for (k = 0; k < 4; k++) {
+                memset(pg_inc_on, 0, num_pg_regions * sizeof(int));
+                memset(pg_dec_on, 0, num_pg_regions * sizeof(int));
+                for (l = 0; l < chan_width_x[0]; l++) {
+                    if (sb_occ[i][j][k][l] > 0) {
+                        //assert(sb_occ[i][j][k][l] == 1);
+                        if (l % 2 == 0) {
+                            pg_inc_on[(l / 2) / pg_group_size] += 1;
+                        } else {
+                            pg_dec_on[(l / 2) / pg_group_size] += 1;
+                        }
+                    }
+                }
+                inc_on = 0;
+                for (l = 0; l < num_pg_regions; l++) {
+                    if (pg_inc_on[l] > 0) {
+                        inc_on += 1;
+                    }
+                }
+                dec_on = 0;
+                for (l = 0; l < num_pg_regions; l++) {
+                    if (pg_dec_on[l] > 0) {
+                        dec_on += 1;
+                    }
+                }
+                assert((inc_on >= 0 && dec_on == 0) || (inc_on == 0 && dec_on >= 0)); //validity check
+                average += (float)(inc_on + dec_on) / num_pg_regions;
+            }
+        }
+    }
+
+    printf("PG utilization: %f", average/((nx+1)*(ny+1)*4));
+
+    /*for (i = 1; i <= nx; i++) {
         for (j = 0; j <= ny; j++) {
             memset(pg_inc_on, 0, num_pg_regions * sizeof(int));
             memset(pg_dec_on, 0, num_pg_regions * sizeof(int));
@@ -413,7 +448,7 @@ void calc_pg_efficiency(int pg_group_size)
         }
     }
 
-    printf("\nCHANY average: %f", 1.0-(average / count));
+    printf("\nCHANY average: %f", 1.0-(average / count));*/
 
     free(pg_inc_on);
     free(pg_dec_on);
