@@ -366,35 +366,6 @@ get_max_pins_per_net(void)
 }
 
 
-extern int ***chanx_occ;
-extern int ***chany_occ;
-
-void print_rr_node_type(t_rr_node *ptr)
-{
-    switch (ptr->type) {
-    case IPIN:
-        printf("IPIN");
-        break;
-    case OPIN:
-        printf("OPIN");
-        break;
-    case CHANX:
-        printf("CHANX");
-        break;
-    case CHANY:
-        printf("CHANY");
-        break;
-    case SOURCE:
-        printf("SOURCE");
-        break;
-    case SINK:
-        printf("SINK");
-        break;
-    default:
-        break;
-    }
-}
-
 boolean
 timing_driven_route_net(int inet,
 			float pres_fac,
@@ -868,13 +839,13 @@ get_timing_driven_expected_cost(int inode,
 	    Tdel += rr_indexed_data[IPIN_COST_INDEX].T_linear;
 
         //conservative estimation (all pg region are unused)
-        /*if (enable_pg) {
+        if (enable_pg) {
             pg_cost = num_segs_same_dir * rr_indexed_data[cost_index].base_cost * exp(-pg_group_size) * pg_group_size +
             num_segs_ortho_dir * rr_indexed_data[ortho_cost_index].base_cost * exp(-pg_group_size) * pg_group_size;
         } else {
             pg_cost = 0;
-        }*/
-        pg_cost = 0;
+        }
+        //pg_cost = 0;
 
 	    expected_cost =
 		criticality_fac * Tdel + (1. - criticality_fac) * cong_cost + pg_cost;

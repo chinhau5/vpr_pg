@@ -196,8 +196,8 @@ get_channel_occupancy_stats(void)
     int **chanx_occ;		/* [1..nx][0..ny] */
     int **chany_occ;		/* [0..nx][1..ny] */
     
-    int **sb_occ; /* [0..nx][0..ny] */
-    int sb_cap, total_sb_occ, total_sb_cap;
+    //int **sb_occ; /* [0..nx][0..ny] */
+    //int sb_cap, total_sb_occ, total_sb_cap;
 
     //sb_occ = (int **)alloc_matrix(0, nx, 0, ny, sizeof(int));
 
