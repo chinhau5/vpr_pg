@@ -328,7 +328,7 @@ void calc_pg_efficiency(int pg_group_size)
     float average,value,max;
     int count, x, y, z;
 
-    num_pg_regions = (int)ceil((float)(chan_width_x[0] / 2) / pg_group_size);
+    num_pg_regions = (chan_width_x[0] / 8) / pg_group_size;
 
     pg_inc_on = (int *)my_malloc(num_pg_regions * sizeof(int));
     pg_dec_on = (int *)my_malloc(num_pg_regions * sizeof(int));
@@ -346,9 +346,11 @@ void calc_pg_efficiency(int pg_group_size)
                     if (sb_occ[i][j][k][l] > 0) {
                         assert(sb_occ[i][j][k][l] == 1);
                         if (l % 2 == 0) {
-                            pg_inc_on[(l / 2) / pg_group_size] += 1;
+                            //pg_inc_on[l / (8*pg_group_size)] += 1;
+                            pg_inc_on[(l / 8) / pg_group_size] += 1;
                         } else {
-                            pg_dec_on[(l / 2) / pg_group_size] += 1;
+                            //pg_dec_on[l / (8*pg_group_size)] += 1;
+                            pg_dec_on[(l / 8) / pg_group_size] += 1;
                         }
                     }
                 }
@@ -591,11 +593,15 @@ float get_pg_cost(int to_node, int pg_group_size)
     int pg_on = 0;
     float cost;
 
+    //printf("[PG] Track: %d\n", rr_node[to_node].ptc_num);
+
     switch (rr_node[to_node].type) {
     case CHANX:
         if (rr_node[to_node].direction == INC_DIRECTION) {
             for (i = 0; i < pg_group_size; i++) {
-                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2;
+                //index = (rr_node[to_node].ptc_num / (pg_group_size * 8)) * (8 * pg_group_size) + i*8;
+                index = ((rr_node[to_node].ptc_num / 8) / pg_group_size) * (8 * pg_group_size) + (rr_node[to_node].ptc_num % 8) + i*8;
+                //printf("%d ", index);
                 if (index >= chan_width_x[0]) {
                     break;
                 }
@@ -605,7 +611,9 @@ float get_pg_cost(int to_node, int pg_group_size)
             }
         } else {
             for (i = 0; i < pg_group_size; i++) {
-                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2 + 1;
+                //index = (rr_node[to_node].ptc_num / (pg_group_size * 8)) * (8 * pg_group_size) + i*8 + 1;
+                index = ((rr_node[to_node].ptc_num / 8) / pg_group_size) * (8 * pg_group_size) + (rr_node[to_node].ptc_num % 8) + i*8;
+                //printf("%d ", index);
                 if (index >= chan_width_x[0]) {
                     break;
                 }
@@ -614,7 +622,6 @@ float get_pg_cost(int to_node, int pg_group_size)
                 //debug[i] = index;
             }
         }
-
         //if (pg_on == 0) {
         //    //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
         //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
@@ -628,7 +635,8 @@ float get_pg_cost(int to_node, int pg_group_size)
     case CHANY:
         if (rr_node[to_node].direction == INC_DIRECTION) {
             for (i = 0; i < pg_group_size; i++) {
-                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2;
+                index = ((rr_node[to_node].ptc_num / 8) / pg_group_size) * (8 * pg_group_size) + (rr_node[to_node].ptc_num % 8) + i*8;
+                //printf("%d ", index);
                 if (index >= chan_width_y[0]) {
                     break;
                 }
@@ -638,7 +646,8 @@ float get_pg_cost(int to_node, int pg_group_size)
             }
         } else {
             for (i = 0; i < pg_group_size; i++) {
-                index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2 + 1;
+                index = ((rr_node[to_node].ptc_num / 8) / pg_group_size) * (8 * pg_group_size) + (rr_node[to_node].ptc_num % 8) + i*8;
+                //printf("%d ", index);
                 if (index >= chan_width_y[0]) {
                     break;
                 }
@@ -662,6 +671,80 @@ float get_pg_cost(int to_node, int pg_group_size)
         cost = 0;
         break;
     }
+
+    //printf("\n");
+
+    //switch (rr_node[to_node].type) {
+    //case CHANX:
+    //    if (rr_node[to_node].direction == INC_DIRECTION) {
+    //        for (i = 0; i < pg_group_size; i++) {
+    //            index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2;
+    //            if (index >= chan_width_x[0]) {
+    //                break;
+    //            }
+
+    //            pg_on += sb_occ[rr_node[to_node].xlow-1][rr_node[to_node].ylow][0][index];
+    //            //debug[i] = index;
+    //        }
+    //    } else {
+    //        for (i = 0; i < pg_group_size; i++) {
+    //            index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2 + 1;
+    //            if (index >= chan_width_x[0]) {
+    //                break;
+    //            }
+
+    //            pg_on += sb_occ[rr_node[to_node].xhigh][rr_node[to_node].ylow][2][index];
+    //            //debug[i] = index;
+    //        }
+    //    }
+
+    //    //if (pg_on == 0) {
+    //    //    //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+    //    //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+    //    //} else {
+    //    //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+    //    //}
+    //    //assert(pg_on <= pg_group_size);
+    //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
+    //    break;
+
+    //case CHANY:
+    //    if (rr_node[to_node].direction == INC_DIRECTION) {
+    //        for (i = 0; i < pg_group_size; i++) {
+    //            index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2;
+    //            if (index >= chan_width_y[0]) {
+    //                break;
+    //            }
+
+    //            pg_on += sb_occ[rr_node[to_node].xlow][rr_node[to_node].ylow-1][3][index];
+    //            //debug[i] = index;
+    //        }
+    //    } else {
+    //        for (i = 0; i < pg_group_size; i++) {
+    //            index = ((rr_node[to_node].ptc_num / 2) / pg_group_size) * (2 * pg_group_size) + i*2 + 1;
+    //            if (index >= chan_width_y[0]) {
+    //                break;
+    //            }
+
+    //            pg_on += sb_occ[rr_node[to_node].xlow][rr_node[to_node].yhigh][1][index];
+    //            //debug[i] = index;
+    //        }
+    //    }
+
+    //    //if (pg_on == 0) {
+    //    //    //increasing the base_cost multiplier has negative effect on T_crit but improves leakage reduction
+    //    //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * 20;
+    //    //} else {
+    //    //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost / pg_on;
+    //    //}
+    //    //assert(pg_on <= pg_group_size);
+    //    cost = rr_indexed_data[rr_node[to_node].cost_index].base_cost * exp(-pg_on) * pg_group_size;
+    //    break;
+
+    //default:
+    //    cost = 0;
+    //    break;
+    //}
 
     /*switch (rr_node[to_node].type) {
     case CHANX:

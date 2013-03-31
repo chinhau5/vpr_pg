@@ -70,7 +70,7 @@ void print_sb_occ()
                 for (l = 0; l < chan_width_x[0]; l++) {
                     //assert(sb_occ[i][j][k][l] >= 0);
                     if (sb_occ[i][j][k][l] > 0) {
-                        //assert(sb_occ[i][j][k][l] == 1);
+                        assert(sb_occ[i][j][k][l] == 1);
                         switch (k) {
                         case 0:
                             fprintf(sb_dump, "West "); break;
@@ -607,7 +607,7 @@ add_route_tree_to_heap(t_rt_node * rt_node,
     if(rt_node->re_expand)
 	{
 	    inode = rt_node->inode;
-        printf("[EXPAND] %f", rr_node_route_inf[inode].acc_cost *rr_node_route_inf[inode].pres_cost);
+        //printf("[EXPAND] %f", rr_node_route_inf[inode].acc_cost *rr_node_route_inf[inode].pres_cost);
 	    backward_path_cost = target_criticality * rt_node->Tdel;
 	    R_upstream = rt_node->R_upstream;
 	    tot_cost =
