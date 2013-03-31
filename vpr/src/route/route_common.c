@@ -325,8 +325,8 @@ void calc_pg_efficiency(int pg_group_size)
     int *pg_inc_on, *pg_dec_on;
     int num_pg_regions;
     //int total;
-    float average;
-    int count;
+    float average,value,max;
+    int count, x, y, z;
 
     num_pg_regions = (int)ceil((float)(chan_width_x[0] / 2) / pg_group_size);
 
@@ -334,6 +334,7 @@ void calc_pg_efficiency(int pg_group_size)
     pg_dec_on = (int *)my_malloc(num_pg_regions * sizeof(int));
 
     average = 0;
+    max = 0;
     count = 0;
 
     for (i = 0; i <= nx; i++) {
@@ -343,7 +344,7 @@ void calc_pg_efficiency(int pg_group_size)
                 memset(pg_dec_on, 0, num_pg_regions * sizeof(int));
                 for (l = 0; l < chan_width_x[0]; l++) {
                     if (sb_occ[i][j][k][l] > 0) {
-                        //assert(sb_occ[i][j][k][l] == 1);
+                        assert(sb_occ[i][j][k][l] == 1);
                         if (l % 2 == 0) {
                             pg_inc_on[(l / 2) / pg_group_size] += 1;
                         } else {
@@ -364,12 +365,20 @@ void calc_pg_efficiency(int pg_group_size)
                     }
                 }
                 assert((inc_on >= 0 && dec_on == 0) || (inc_on == 0 && dec_on >= 0)); //validity check
-                average += (float)(inc_on + dec_on) / num_pg_regions;
+                value = (float)(inc_on + dec_on) / num_pg_regions;
+                if (value > max) {
+                    max = value;
+                    x = i;
+                    y = j;
+                    z = k;
+                }
+                average += value;
             }
         }
     }
 
-    printf("PG utilization: %f", average/((nx+1)*(ny+1)*4));
+    printf("PG utilization: %f\n", average/((nx+1)*(ny+1)*4));
+    printf("Max utilization: %f %d %d %d\n", max, x, y, z);
 
     /*for (i = 1; i <= nx; i++) {
         for (j = 0; j <= ny; j++) {
@@ -762,7 +771,7 @@ float get_pg_cost(int to_node, int pg_group_size)
     return cost;
 }
 
-#define PRINT_PATHFINDER
+//#define PRINT_PATHFINDER
 
 void pg_update_sb_occ(struct s_trace *tptr,
     int add_or_sub)
@@ -1113,8 +1122,6 @@ pathfinder_update_one_cost(struct s_trace *route_segment_start,
 		    tptr = tptr->next;	/* Skip next segment. */
 		    if(tptr == NULL)
 			break;
-            //else
-                //pg_update_sb_occ(tptr, add_or_sub); //important!!
 		}
 
 	    tptr = tptr->next;
