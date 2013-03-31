@@ -407,22 +407,6 @@ timing_driven_route_net(int inet,
     pathfinder_update_one_cost(trace_head[inet], -1, pres_fac);
     free_traceback(inet);
 
-    /*for (i = 1; i <= nx; i++) {
-        for (j = 0; j <= ny; j++) {
-            for (k = 0; k <= chan_width_x[0] - 1; k++) {
-                assert(chanx_occ[i][j][k] == 0);
-            }
-        }
-    }
-
-    for (i = 0; i <= nx; i++) {
-        for (j = 1; j <= ny; j++) {
-            for (k = 0; k <= chan_width_y[0] - 1; k++) {
-                assert(chany_occ[i][j][k] == 0);
-            }
-        }
-    }*/
-
     for(ipin = 1; ipin <= clb_net[inet].num_sinks; ipin++)
 	{			/* For all sinks */
 	    pin_crit = max(max_criticality - net_slack[ipin] / T_crit, 0.);
@@ -623,6 +607,7 @@ add_route_tree_to_heap(t_rt_node * rt_node,
     if(rt_node->re_expand)
 	{
 	    inode = rt_node->inode;
+        printf("[EXPAND] %f", rr_node_route_inf[inode].acc_cost *rr_node_route_inf[inode].pres_cost);
 	    backward_path_cost = target_criticality * rt_node->Tdel;
 	    R_upstream = rt_node->R_upstream;
 	    tot_cost =
@@ -633,9 +618,7 @@ add_route_tree_to_heap(t_rt_node * rt_node,
 							    R_upstream,
                                 enable_pg,
                                 pg_group_size);
-//#ifdef PG
-//        tot_cost += get_pg_cost(inode);
-//#endif
+
 	    node_to_heap(inode, tot_cost, NO_PREVIOUS, NO_PREVIOUS,
 			 backward_path_cost, R_upstream);
 	}
@@ -710,27 +693,6 @@ timing_driven_expand_neighbours(struct s_heap *current,
 				   rr_node[to_node].yhigh != target_y))
 		continue;
 
-        /*if (rr_node[inode].type == CHANX) {
-            if (rr_node[to_node].type == CHANX) {
-                //connecting to another track in the same direction
-                temp = 100;
-            } else if (rr_node[to_node].type == CHANY) {
-                assert(rr_node[to_node].xlow == rr_node[to_node].xhigh);
-                if (rr_node[inode].direction == DEC_DIRECTION && rr_node[to_node].xlow == rr_node[inode].xlow) {
-                    temp = 1;
-                } else if (rr_node[inode].direction == INC_DIRECTION && rr_node[to_node].xlow == rr_node[inode].xhigh) {
-                    //changing direction at the end of the x-track
-                    //get_rr_node_index(CHANY, rr_node_indices)
-                    assert();
-                    temp = 0;
-                } else {
-                    //changing direction at the middle of the x-track
-                    temp = 1;
-                }
-            }
-        } else if (rr_node[inode].type == CHANY) {
-
-        }*/
 
 /* new_back_pcost stores the "known" part of the cost to this node -- the   *
  * congestion cost of all the routing resources back to the existing route  *
