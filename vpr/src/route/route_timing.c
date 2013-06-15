@@ -55,44 +55,9 @@ static void timing_driven_check_net_delays(float **net_delay);
 
 static int mark_node_expansion_by_bin(int inet, int target_node, t_rt_node * rt_node);
 
-extern int ****sb_occ;
+
 
 /************************ Subroutine definitions *****************************/
-
-void print_sb_occ()
-{
-    int i, j, k, l;
-    FILE *sb_dump = fopen("sb_dump.log", "w");
-    for (i = 0; i <= nx; i++) {
-        for (j = 0; j <= ny; j++) {
-            fprintf(sb_dump, "SB (%d,%d)\n", i, j);
-            for (k = 0; k < 4; k++) {
-                for (l = 0; l < chan_width_x[0]; l++) {
-                    //assert(sb_occ[i][j][k][l] >= 0);
-                    if (sb_occ[i][j][k][l] > 0) {
-                        assert(sb_occ[i][j][k][l] == 1);
-                        switch (k) {
-                        case 0:
-                            fprintf(sb_dump, "West "); break;
-                        case 1:
-                            fprintf(sb_dump, "North "); break;
-                        case 2:
-                            fprintf(sb_dump, "East "); break;
-                        case 3:
-                            fprintf(sb_dump, "South "); break;
-                        default:
-                            break;
-                        }
-                        fprintf(sb_dump, "Track %d: %d\n", l, sb_occ[i][j][k][l]);
-                    }
-                }
-            }
-            fprintf(sb_dump, "\n");
-        }
-    }
-    fprintf(sb_dump, "\n");
-    fclose(sb_dump);
-}
 
 boolean
 try_timing_driven_route(struct s_router_opts router_opts,
@@ -260,9 +225,6 @@ try_timing_driven_route(struct s_router_opts router_opts,
 #endif
 			free(net_index);
 			free(sinks);
-            calc_pg_efficiency(router_opts.pg_group_size);
-            print_sb_occ();
-
 		    return (TRUE);
 		}
 

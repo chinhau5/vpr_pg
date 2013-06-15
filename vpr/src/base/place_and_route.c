@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <time.h>
 #include "util.h"
@@ -52,6 +53,228 @@ void free_pb_data(t_pb *pb);
 
 
 /************************* Subroutine Definitions ****************************/
+
+extern int ****sb_occ;
+
+void print_sb_occ()
+{
+    int i, j, k, l;
+    FILE *sb_dump = fopen("sb_dump.log", "w");
+    for (i = 0; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            fprintf(sb_dump, "SB (%d,%d)\n", i, j);
+            for (k = 0; k < 4; k++) {
+                for (l = 0; l < chan_width_x[0]; l++) {
+                    //assert(sb_occ[i][j][k][l] >= 0);
+                    if (sb_occ[i][j][k][l] > 0) {
+                        assert(sb_occ[i][j][k][l] == 1);
+                        switch (k) {
+                        case 0:
+                            fprintf(sb_dump, "West "); break;
+                        case 1:
+                            fprintf(sb_dump, "North "); break;
+                        case 2:
+                            fprintf(sb_dump, "East "); break;
+                        case 3:
+                            fprintf(sb_dump, "South "); break;
+                        default:
+                            break;
+                        }
+                        fprintf(sb_dump, "Track %d: %d\n", l, sb_occ[i][j][k][l]);
+                    }
+                }
+            }
+            fprintf(sb_dump, "\n");
+        }
+    }
+    fprintf(sb_dump, "\n");
+    fclose(sb_dump);
+}
+
+void calc_pg_efficiency(int pg_group_size)
+{
+    int i, j, k, l;
+    int dir_inc_on, dir_dec_on;
+    int non_dir_inc_on, non_dir_dec_on;
+    int **pg_inc_on, **pg_dec_on;
+    int num_pg_regions;
+    //int total;
+    int non_dir_total, dir_total;
+    float dir_average,non_dir_average,value,max;
+    int count, x, y, z;
+
+    assert((chan_width_x[0] % 8) == 0);
+    assert((chan_width_x[0] / 8) % pg_group_size == 0);
+    num_pg_regions = (chan_width_x[0] / 8) / pg_group_size;
+
+    /*pg_inc_on = (int *)my_malloc(num_pg_regions * sizeof(int));
+    pg_dec_on = (int *)my_malloc(num_pg_regions * sizeof(int));*/
+
+    pg_inc_on = (int **)alloc_matrix(0, 3, 0, num_pg_regions-1, sizeof(int));
+    pg_dec_on = (int **)alloc_matrix(0, 3, 0, num_pg_regions-1, sizeof(int));
+
+    dir_average = 0;
+    non_dir_average = 0;
+    max = 0;
+    count = 0;
+    non_dir_total = dir_total = 0;
+
+    for (i = 0; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            //reset the values to zero
+            for (k = 0; k < 4; k++) {
+                for (l = 0; l < num_pg_regions; l++) {
+                    pg_inc_on[k][l] = 0;
+                    pg_dec_on[k][l] = 0;
+                }
+            }
+
+            for (k = 0; k < 4; k++) {
+                for (l = 0; l < chan_width_x[0]; l++) {
+                    if (sb_occ[i][j][k][l] > 0) {
+                        assert(sb_occ[i][j][k][l] == 1);
+                        if (l % 2 == 0) {
+                            //pg_inc_on[l / (8*pg_group_size)] += 1;
+                            pg_inc_on[k][(l / 8) / pg_group_size] += 1;
+                        } else {
+                            //pg_dec_on[l / (8*pg_group_size)] += 1;
+                            pg_dec_on[k][(l / 8) / pg_group_size] += 1;
+                        }
+                    }
+                }
+            }
+
+            //directional stats
+            for (k = 0; k < 4; k++) {
+                dir_inc_on = 0;
+                for (l = 0; l < num_pg_regions; l++) {
+                    if (pg_inc_on[k][l] > 0) {
+                        dir_inc_on += 1;
+                    }
+                }
+                dir_dec_on = 0;
+                for (l = 0; l < num_pg_regions; l++) {
+                    if (pg_dec_on[k][l] > 0) {
+                        dir_dec_on += 1;
+                    }
+                }
+                assert((dir_inc_on >= 0 && dir_dec_on == 0) || (dir_inc_on == 0 && dir_dec_on >= 0)); //validity check
+                dir_total += dir_inc_on + dir_dec_on;
+                value = (float)(dir_inc_on + dir_dec_on) / num_pg_regions;
+                if (value > max) {
+                    max = value;
+                    x = i;
+                    y = j;
+                    z = k;
+                }
+                dir_average += value;
+            }
+
+            //non-directional stats
+            value = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                //non_dir_inc_on = non_dir_dec_on = 0;
+                
+                non_dir_inc_on = pg_inc_on[0][k] + pg_dec_on[2][k] + pg_inc_on[3][k] + pg_dec_on[1][k];
+                non_dir_dec_on = pg_dec_on[0][k] + pg_inc_on[2][k] + pg_dec_on[3][k] + pg_inc_on[1][k];
+                assert((non_dir_inc_on >= 0 && non_dir_dec_on == 0) || (non_dir_inc_on == 0 && non_dir_dec_on >= 0)); //validity check
+                if (non_dir_inc_on > 0 || non_dir_dec_on > 0) {
+                    value += 1;
+                    non_dir_total += 1;
+                }
+            }
+            non_dir_average += value / num_pg_regions;
+        }
+    }
+
+    printf("PG utilization: %f\n", dir_average/((nx+1)*(ny+1)*4));
+    printf("Non-dir PG utilization: %f\n", non_dir_average/((nx+1)*(ny+1)*4));
+    printf("Dir total: %d\n", dir_total);
+    printf("Non-dir total: %d\n", non_dir_total*4);
+    printf("Max utilization: %f %d %d %d\n", max, x, y, z);
+
+    /*for (i = 1; i <= nx; i++) {
+        for (j = 0; j <= ny; j++) {
+            memset(pg_inc_on, 0, num_pg_regions * sizeof(int));
+            memset(pg_dec_on, 0, num_pg_regions * sizeof(int));
+            for (k = 0; k <= chan_width_x[0] - 1; k++) {
+                if (k % 2 == 0) {
+                    pg_inc_on[(k / 2) / pg_group_size] += chanx_occ[i][j][k];
+                } else {
+                    pg_dec_on[(k / 2) / pg_group_size] += chanx_occ[i][j][k];
+                }
+            }
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_inc_on[k] > 0) {
+                    total += 1;
+                }
+            }
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf("\nCHANX (%d, %d): %f", i, j, (float)total / num_pg_regions);
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_dec_on[k] > 0) {
+                    total += 1;
+                }
+            }
+
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf(" %f", (float)total / num_pg_regions);
+        }
+    }
+
+    printf("\nCHANX average: %f", 1.0-(average / count));
+
+    average = 0;
+    count = 0;
+
+    for (i = 0; i <= nx; i++) {
+        for (j = 1; j <= ny; j++) {
+            memset(pg_inc_on, 0, num_pg_regions * sizeof(int));
+            memset(pg_dec_on, 0, num_pg_regions * sizeof(int));
+
+            for (k = 0; k <= chan_width_y[0] - 1; k++) {
+                if (k % 2 == 0) {
+                    pg_inc_on[(k / 2) / pg_group_size] += chany_occ[i][j][k];
+                } else {
+                    pg_dec_on[(k / 2) / pg_group_size] += chany_occ[i][j][k];
+                }
+            }
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_inc_on[k] > 0) {
+                    total += 1;
+                }
+            }
+
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf("\nCHANY (%d, %d): %f", i, j, (float)total / num_pg_regions);
+
+            total = 0;
+            for (k = 0; k < num_pg_regions; k++) {
+                if (pg_dec_on[k] > 0) {
+                    total += 1;
+                }
+            }
+
+            average +=  (float)total / num_pg_regions;
+            count++;
+            //printf(" %f", (float)total / num_pg_regions);
+        }
+    }
+
+    printf("\nCHANY average: %f", 1.0-(average / count));*/
+
+    //free_matrix(pg_inc_on, 0, 3,);
+    //free(pg_dec_on);
+}
 
 void
 place_and_route(enum e_operation operation,
@@ -229,6 +452,9 @@ place_and_route(enum e_operation operation,
 				  net_slack, net_delay);
 
 		    print_route(route_file);
+
+            calc_pg_efficiency(router_opts.pg_group_size);
+            print_sb_occ();
 
 #ifdef CREATE_ECHO_FILES
 		    /*print_sink_delays("routing_sink_delays.echo"); */
